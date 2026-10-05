@@ -80,6 +80,23 @@ export function createTapSystem({ camera, dom, onTap }) {
       for (const meshes of marked.values()) setGlow(meshes, amount);
     },
 
+    // Screen position (client px) of a marked object's center, for dev tooling.
+    screenPoint(id) {
+      for (const obj of marked.keys()) {
+        if (obj.userData.tapId !== id) continue;
+        const box = new THREE.Box3().setFromObject(obj);
+        const p = box.getCenter(new THREE.Vector3()).project(camera);
+        const rect = dom.getBoundingClientRect();
+        return { x: rect.left + ((p.x + 1) / 2) * rect.width, y: rect.top + ((1 - p.y) / 2) * rect.height };
+      }
+      return null;
+    },
+
+    // Ids currently tappable.
+    ids() {
+      return [...marked.keys()].map((o) => o.userData.tapId);
+    },
+
     // Unmarks everything (called between scenes).
     clear() {
       for (const obj of [...marked.keys()]) this.unmark(obj);

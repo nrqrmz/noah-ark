@@ -46,10 +46,14 @@ world.add(sun);
 // The active scene's framing box; the camera refits on every resize.
 let frameBox = { cx: 0, cy: 0, cz: 0, w: 6, h: 6 };
 
+// `elev` tilts the camera down onto the box (radians above the horizon).
+// A box may carry a `portrait` override used when the stage is taller than wide.
 function refit() {
-  const d = fitDistance(frameBox, camera.aspect, camera.fov);
-  camera.position.set(frameBox.cx, frameBox.cy, frameBox.cz + d);
-  camera.lookAt(frameBox.cx, frameBox.cy, frameBox.cz);
+  const box = camera.aspect < 1 && frameBox.portrait ? { ...frameBox, ...frameBox.portrait } : frameBox;
+  const d = fitDistance(box, camera.aspect, camera.fov);
+  const elev = box.elev ?? 0;
+  camera.position.set(box.cx, box.cy + Math.sin(elev) * d, box.cz + Math.cos(elev) * d);
+  camera.lookAt(box.cx, box.cy, box.cz);
 }
 
 function resize() {
@@ -105,6 +109,7 @@ const story = createStory({
     world.add(root);
     return {
       root,
+      world,
       camera,
       tap,
       frame(box) { frameBox = box; refit(); },
@@ -157,9 +162,26 @@ document.addEventListener('visibilitychange', () => {
 
 async function boot() {
   dicts = await loadDictionaries();
-  const remembered = recallLanguage();
+  // Dev shortcut: ?scene=<n>&lang=<es|en> skips the cover.
+  const params = new URLSearchParams(location.search);
+  const devScene = Number(params.get('scene'));
+  const remembered = params.get('lang') ?? recallLanguage();
   if (remembered) setLanguage(remembered);
-  story.start(0);
+  if (devScene > 0 && lang) story.start(devScene);
+  else story.start(0);
+  if (params.has('scene') || params.has('dev')) {
+    // Dev hooks for automated visual checks: tap a marked object by id.
+    window.__noah = {
+      story,
+      ids: () => tap.ids(),
+      tap(id) {
+        const pt = tap.screenPoint(id);
+        if (!pt) return false;
+        renderer.domElement.dispatchEvent(new PointerEvent('pointerdown', { clientX: pt.x, clientY: pt.y, bubbles: true }));
+        return true;
+      },
+    };
+  }
   renderer.setAnimationLoop(() => {
     const dt = Math.min(clock.getDelta(), 0.05);
     story.update(dt);

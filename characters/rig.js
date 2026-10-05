@@ -8,15 +8,21 @@ const geometries = new Map();
 export function mat(hex, { basic = false, roughness = 0.7 } = {}) {
   const key = `${hex}:${basic}:${roughness}`;
   if (!materials.has(key)) {
-    materials.set(key, basic
+    const m = basic
       ? new THREE.MeshBasicMaterial({ color: hex })
-      : new THREE.MeshStandardMaterial({ color: hex, roughness }));
+      : new THREE.MeshStandardMaterial({ color: hex, roughness });
+    m.userData.shared = true; // scenes must not dispose cached resources
+    materials.set(key, m);
   }
   return materials.get(key);
 }
 
 export function geo(key, make) {
-  if (!geometries.has(key)) geometries.set(key, make());
+  if (!geometries.has(key)) {
+    const g = make();
+    g.userData.shared = true;
+    geometries.set(key, g);
+  }
   return geometries.get(key);
 }
 
