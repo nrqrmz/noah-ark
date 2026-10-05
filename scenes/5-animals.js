@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { createAnimalsState } from './state/animals.js';
-import { createLandscape, disposeTree, stepToward, keepApart } from './common.js';
+import { createLandscape, disposeTree, keepApart, createBoarding } from './common.js';
 import { animalsInRound, foodsForRound } from '../characters/animals/data.js';
 import { createAnimal, updateAnimal } from '../characters/animals/index.js';
 import { createPerson, familyLook, updatePerson, facePoint } from '../characters/people.js';
@@ -20,7 +20,7 @@ export default function createScene(ctx) {
   let ark;
   let noah;
   let rampFoot;
-  let doorPoint;
+  let boarder;
   let obstacles = [];
   let pairs = []; // { id, animals: [male, female], walkers: [...], shake }
   let foods = []; // { id, obj }
@@ -55,54 +55,14 @@ export default function createScene(ctx) {
     });
   }
 
-  // Path from where the pair stands to inside the ark: ramp foot, door, inside.
+  // Each animal of the pair walks up the ramp; the female follows a moment later.
   function boardPair(pair) {
     pair.animals.forEach((a, k) => {
       ctx.tap.unmark(a.root);
-      a.walk = {
-        delay: k * 0.45,
-        points: [
-          rampFoot.clone().add(new THREE.Vector3(0, 0, 1.2)),
-          rampFoot.clone(),
-          doorPoint.clone(),
-          doorPoint.clone().add(new THREE.Vector3(0, 0, -1.2)),
-        ],
-      };
+      a.walk = { delay: k * 0.45, points: boarder.path() };
     });
     pair.walkers = pair.animals;
     boarding.push(...pair.animals);
-  }
-
-  // Height of the ramp surface at depth z (0 at its foot, door height at the doorway).
-  function rampHeight(z) {
-    const u = (rampFoot.z - z) / (rampFoot.z - doorPoint.z);
-    return Math.max(0, Math.min(1, u)) * doorPoint.y;
-  }
-
-  // Walks an animal along its boarding path; on the ramp it climbs toward the door.
-  function updateWalker(a, dt) {
-    const w = a.walk;
-    if (w.delay > 0) {
-      w.delay -= dt;
-      updateAnimal(a, dt, {});
-      return;
-    }
-    if (!w.points.length) {
-      a.root.visible = false;
-      return;
-    }
-    const target = w.points[0];
-    // Fast enough to cover the longest path (about 12 units) within BOARD_TIME.
-    const speed = a.wings ? 5.5 : 4.8;
-    // On the ground, "close enough" counts as arrived: two big animals heading for
-    // the same spot would otherwise push each other forever.
-    const tolerance = w.points.length >= 3 ? Math.max(0.5, a.radius * 0.6) : 0;
-    const near = Math.hypot(target.x - a.root.position.x, target.z - a.root.position.z) <= tolerance;
-    const arrived = near || stepToward(a.root.position, target, speed, dt);
-    a.root.rotation.y = Math.atan2(target.x - a.root.position.x, target.z - a.root.position.z) || a.root.rotation.y;
-    a.root.position.y = a.wings ? 0.8 : rampHeight(a.root.position.z);
-    if (arrived) w.points.shift();
-    updateAnimal(a, dt, { moving: true, fly: !!a.wings });
   }
 
   return {
@@ -113,7 +73,7 @@ export default function createScene(ctx) {
       ark.setDoor(1);
       ctx.root.add(ark.root);
       rampFoot = ark.rampFoot.clone().add(ARK_POS);
-      doorPoint = ark.doorPoint.clone().add(ARK_POS);
+      boarder = createBoarding(rampFoot, ark.doorPoint.clone().add(ARK_POS));
       obstacles = ark.footprint.map((c) => ({ x: c.x + ARK_POS.x, z: c.z + ARK_POS.z, r: c.r }));
       noah = createPerson(familyLook('noah'));
       noah.root.position.set(rampFoot.x - 2.2, 0, rampFoot.z + 0.6);
@@ -137,9 +97,11 @@ export default function createScene(ctx) {
         }
       }
       for (const a of boarding) {
-        updateWalker(a, dt);
+        if (!a.root.visible) continue;
+        const phase = boarder.step(a, a.wings ? 5.5 : 4.8, dt, { flying: !!a.wings });
+        updateAnimal(a, dt, { moving: phase === 'ground' || phase === 'ramp', fly: !!a.wings });
         // Still on the ground heading for the ramp: solid like everyone else.
-        if (!a.wings && a.root.visible && a.walk.delay <= 0 && a.walk.points.length >= 3) solid.push(a);
+        if (phase === 'ground' && !a.wings) solid.push(a);
       }
       keepApart([noah, ...solid], obstacles);
       // The selected food bobs above the others.
