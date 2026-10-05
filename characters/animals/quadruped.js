@@ -109,18 +109,25 @@ export function buildQuadruped(o) {
   const girth = ((o.bodyScale?.[0] ?? 1) + (o.bodyScale?.[1] ?? 1)) / 2;
   const bodyCoat = painted('body', o.color, capsuleRepeat(o.bodyR, o.bodyLen, girth));
   // `waist` slims the middle: a thinner torso between a full chest and hips (big cats).
-  // A waisted body also ends just past the legs (small rump and chest, no overhang).
-  const legZ = o.bodyLen * 0.42;
   const torsoR = o.bodyR * (o.waist ?? 1);
-  const torsoLen = o.waist ? Math.max(0.1, 2 * (legZ + o.bodyR * 0.55 - torsoR)) : o.bodyLen;
-  const torso = mesh(bodyCoat ? coatCapsule(torsoR, torsoLen) : capsule(torsoR, torsoLen), bodyCoat ?? coat, shell);
+  const torso = mesh(bodyCoat ? coatCapsule(torsoR, o.bodyLen) : capsule(torsoR, o.bodyLen), bodyCoat ?? coat, shell);
   torso.position.y = o.waist ? o.bodyR * 0.1 : 0; // tuck the belly up, keep the back line
   torso.rotation.x = Math.PI / 2;
-  const halfLen = torsoLen / 2 + torsoR;
+  const halfLen = o.bodyLen / 2 + torsoR;
+
+  // Legs sit as far out as the body's round ends allow, so no rump or chest
+  // overhangs them; each pivot stays inside the end cap (checked in shell space).
+  const sx = o.bodyScale?.[0] ?? 1;
+  const sy = o.bodyScale?.[1] ?? 1;
+  const legX = Math.min(o.bodyR * sx - o.legR * 1.2, o.bodyR * sx * 0.5);
+  const lx = legX / sx;
+  const ly = (o.bodyR * 0.45) / sy;
+  const capDz = Math.sqrt(Math.max(0, o.bodyR ** 2 - lx ** 2 - ly ** 2)) * 0.95;
+  const legZ = o.bodyLen / 2 + Math.min(o.bodyR - o.legR * 1.15, capDz);
   if (o.waist) {
     // Deep chest hanging low over the front legs; smaller, higher hips over the hind legs.
-    mesh(sphere(o.bodyR, 24, 18), coat, shell, 0, -o.bodyR * 0.12, legZ - o.bodyR * 0.18).scale.set(1, 1.18, 0.85); // chest
-    mesh(sphere(o.bodyR * 0.88, 24, 18), coat, shell, 0, o.bodyR * 0.07, -legZ + o.bodyR * 0.15).scale.set(1, 1, 0.85); // hips
+    mesh(sphere(o.bodyR, 24, 18), coat, shell, 0, -o.bodyR * 0.12, legZ - o.bodyR * 0.4).scale.set(1, 1.18, 0.85); // chest
+    mesh(sphere(o.bodyR * 0.88, 24, 18), coat, shell, 0, o.bodyR * 0.07, -legZ + o.bodyR * 0.4).scale.set(1, 1, 0.85); // hips
   }
 
   if (o.belly) {
@@ -131,7 +138,6 @@ export function buildQuadruped(o) {
   // Legs: pivots inside the body volume, hooves/paws at the end.
   const legMat = mat(o.legColor ?? o.color);
   const legCoat = painted('legs', o.legColor ?? o.color, capsuleRepeat(o.legR, o.legLen));
-  const legX = (o.bodyR * (o.bodyScale?.[0] ?? 1)) - o.legR * 1.2;
   const legY = o.bodyY - o.bodyR * 0.45;
   // `legTaper` (bottom/top radius) gives thick upper legs slimming toward the paw;
   // its ends hide inside the joint sphere and the paw.
@@ -305,8 +311,8 @@ export function buildQuadruped(o) {
 
   return {
     root, body, head, neck, legs, tail, trunk,
-    // From the nominal length, so a waisted body keeps room for its head and mane.
-    radius: Math.max((o.bodyLen / 2 + o.bodyR) * 0.85, o.bodyR * 1.2),
+    // A waisted body is short between its legs; its footprint reaches the paws.
+    radius: Math.max(halfLen * 0.85, o.bodyR * 1.2, o.waist ? legZ + o.legR * 1.25 : 0),
     gait: o.gait ?? 8,
   };
 }

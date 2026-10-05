@@ -6,7 +6,7 @@ import { buildBird } from './bird.js';
 // Parameter sets for every four-legged species. Units: a person is 1.8 tall.
 const PRESETS = {
   lion: {
-    color: 0xd9a650, bodyR: 0.27, bodyLen: 1.0, bodyY: 0.8, bodyScale: [0.88, 1], waist: 0.8, legR: 0.08, legLen: 0.42, legTaper: 0.65,
+    color: 0xd9a650, bodyR: 0.27, bodyLen: 0.56, bodyY: 0.8, bodyScale: [0.88, 1], waist: 0.8, legR: 0.08, legLen: 0.42, legTaper: 0.65,
     headR: 0.23, headScale: [1, 0.92, 1.12], snout: { pads: true, r: 0.45, z: 0.95, long: 1.1, color: 0xf2dcae, nose: 0x5a3a2a },
     ears: 'feline', eyes: { forward: 0.95, up: 0.22, side: 0.42, size: 0.14 }, neckLen: 0.16, neckR: 0.13, neckAngle: 0.75, paws: true,
     tail: { len: 0.7, r: 0.035, angle: -2.3, tuft: 0x8a4d1e }, mane: 0x9a5422, gait: 9,
