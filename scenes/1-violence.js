@@ -7,8 +7,9 @@ import { createGodLight } from '../world/sky.js';
 import { mat, mesh, sphere } from '../characters/rig.js';
 
 // City houses: 0 and 2 hide a cartoon fight, 1 and 3 a masked thief.
-// Staggered so the back houses show between the front ones.
-const HOUSE_SPOTS = [[-5.5, -4], [-1.5, -4.5], [-3.8, 0], [0.2, -0.6]];
+// Staggered so the back houses show between the front ones; the back row uses
+// the taller variants so no house is hidden behind another. [x, z, variant]
+const HOUSE_SPOTS = [[-6, -4.4, 2], [-1.6, -4.8, 1], [-4, 0, 0], [0.6, -0.4, 3]];
 const NOAH_SPOT = new THREE.Vector3(3.6, 0, 3);
 
 // Scene 1: the world full of violence; God's light falls on Noah in his field.
@@ -74,8 +75,8 @@ export default function createScene(ctx) {
   return {
     build() {
       landscape = createLandscape(ctx, { mood: 'gray', clouds: 5, darkClouds: true, ground: 0x7fa65a });
-      HOUSE_SPOTS.forEach(([x, z], i) => {
-        const house = createHouse(i);
+      HOUSE_SPOTS.forEach(([x, z, variant], i) => {
+        const house = createHouse(variant);
         house.position.set(x, 0, z);
         ctx.root.add(house);
         house.updateMatrixWorld();

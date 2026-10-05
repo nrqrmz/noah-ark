@@ -174,6 +174,8 @@ async function boot() {
     window.__noah = {
       story,
       ids: () => tap.ids(),
+      // Ids that are marked tappable but hidden behind something.
+      unreachable: () => tap.ids().filter((id) => !tap.screenPoint(id)),
       tap(id) {
         const pt = tap.screenPoint(id);
         if (!pt) return false;
