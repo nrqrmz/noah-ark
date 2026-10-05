@@ -6,10 +6,10 @@ import { buildBird } from './bird.js';
 // Parameter sets for every four-legged species. Units: a person is 1.8 tall.
 const PRESETS = {
   lion: {
-    color: 0xd9a650, bodyR: 0.36, bodyLen: 0.7, bodyY: 0.78, legR: 0.11, legLen: 0.3,
-    headR: 0.32, snout: { r: 0.45, z: 0.75, color: 0xefd29a, nose: 0x5a3a2a }, ears: 'round',
-    neckLen: 0.12, neckAngle: 0.9, belly: 0xe8c483,
-    tail: { len: 0.6, r: 0.04, angle: -2.2, tuft: 0x8a4d1e }, mane: 0x9a5422,
+    color: 0xd9a650, bodyR: 0.27, bodyLen: 0.9, bodyY: 0.8, bodyScale: [0.88, 1], waist: 0.84, legR: 0.08, legLen: 0.42,
+    headR: 0.23, headScale: [1.05, 0.95, 1.05], snout: { pads: true, r: 0.45, z: 0.88, long: 1.1, color: 0xf2dcae, nose: 0x5a3a2a },
+    ears: 'feline', eyes: { forward: 0.9, up: 0.22, side: 0.42, size: 0.14 }, neckLen: 0.16, neckR: 0.13, neckAngle: 0.75, paws: true,
+    tail: { len: 0.7, r: 0.035, angle: -2.3, tuft: 0x8a4d1e }, mane: 0x9a5422, gait: 9,
   },
   cow: {
     color: 0xf3efe8, bodyR: 0.42, bodyLen: 0.85, bodyY: 0.9, legR: 0.12, legLen: 0.36,
@@ -67,7 +67,13 @@ const PRESETS = {
 
 // Female variations: slightly smaller, and a few species get their own detail.
 function femaleOverrides(id) {
-  if (id === 'lion') return { mane: null, ears: 'round' };
+  if (id === 'lion') {
+    // No mane; a longer head and a narrower muzzle.
+    return {
+      mane: null, headScale: [0.95, 0.92, 1.1], eyes: { ...PRESETS.lion.eyes, forward: 0.96 },
+      snout: { ...PRESETS.lion.snout, r: 0.4, z: 0.95, long: 1.15 },
+    };
+  }
   if (id === 'cow') return { coat: { ...PRESETS.cow.coat, seed: 5 } }; // her own spot layout
   if (id === 'cat') {
     // Gray tabby; the male is the orange one.

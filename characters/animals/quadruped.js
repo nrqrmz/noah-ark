@@ -20,6 +20,63 @@ export function addEyes(head, r, { forward = 0.75, up = 0.25, side = 0.42, size 
   }
 }
 
+// A lion's mane: two rings of tufts (cones sweeping back and down) framing the
+// face, a darker outer ring, a full back, and a ruff that covers the neck and chest.
+function addMane(head, neck, r, neckR, neckLen, hex) {
+  const inner = mat(hex);
+  const outer = mat(new THREE.Color(hex).multiplyScalar(0.75).getHex());
+  const up = new THREE.Vector3(0, 1, 0);
+  const tuft = (parent, material, size, len, pos, dir) => {
+    const cone = mesh(geo(`maneTuft${size.toFixed(4)}:${len.toFixed(4)}`, () => new THREE.ConeGeometry(size, len, 12)), material, parent);
+    dir.normalize();
+    cone.quaternion.setFromUnitVectors(up, dir);
+    cone.position.copy(pos).addScaledVector(dir, len * 0.3);
+    return cone;
+  };
+  // Full back behind the face, so no gaps show between the tufts.
+  mesh(sphere(r * 1.05, 16, 12), inner, head, 0, -r * 0.05, -r * 0.4).scale.set(1.1, 1.2, 0.85);
+  const rings = [
+    { n: 12, rad: 0.95, z: -0.2, size: 0.36, len: 0.55, back: 0.9, material: inner },
+    { n: 13, rad: 1.1, z: -0.55, size: 0.42, len: 0.7, back: 1.6, material: outer },
+  ];
+  for (const [k, ring] of rings.entries()) {
+    for (let i = 0; i < ring.n; i++) {
+      const a = (i / ring.n) * Math.PI * 2 + k * 0.22;
+      const x = Math.cos(a);
+      const y = Math.sin(a);
+      // Fuller around the cheeks and down the chin, shorter on top, a bit uneven like real hair.
+      const len = ring.len * r * (1 + 0.15 * Math.sin(i * 2.3)) * (y < 0 ? 1.15 : y > 0.6 ? 0.8 : 1);
+      tuft(head, ring.material, ring.size * r, len,
+        new THREE.Vector3(x * r * ring.rad * 1.05, y * r * ring.rad * 1.1 - r * 0.1, r * ring.z),
+        new THREE.Vector3(x, y - 0.35, -ring.back));
+    }
+  }
+  // Ruff over the neck and shoulders, in body space so it drapes with gravity:
+  // a filled cape from the back of the head to the withers, tufts sweeping back
+  // along it and a few hanging down over the chest.
+  const body = neck.parent;
+  const base = neck.position;
+  const headPos = new THREE.Vector3(0, neckLen + neckR * 0.6, 0).applyEuler(neck.rotation).add(base);
+  const cape = mesh(sphere(r * 1.15, 16, 12), outer, body, 0, (base.y + headPos.y) / 2, base.z - r * 0.05);
+  cape.scale.set(0.95, 1, 1.3);
+  for (let i = 0; i < 4; i++) {
+    const t = i / 3;
+    tuft(body, i % 2 ? inner : outer, r * 0.36, r * (0.65 - t * 0.15),
+      new THREE.Vector3(0, headPos.y + r * 0.4 - t * r * 0.45, headPos.z - r * 0.7 - t * r * 0.9),
+      new THREE.Vector3(0, -0.35, -1));
+    for (const s of [-1, 1]) {
+      tuft(body, outer, r * 0.32, r * (0.6 - t * 0.15),
+        new THREE.Vector3(s * r * 0.6, headPos.y - t * r * 0.4, headPos.z - r * 0.6 - t * r * 0.8),
+        new THREE.Vector3(s * 0.5, -0.6, -1));
+    }
+  }
+  for (const x of [-0.4, 0, 0.4]) {
+    tuft(body, inner, r * 0.4, r * 0.7,
+      new THREE.Vector3(x * r, headPos.y - r * 0.95, headPos.z - r * 0.15),
+      new THREE.Vector3(x * 0.6, -1, 0.25));
+  }
+}
+
 // Builds a four-legged animal facing +Z from a parameter set (see index.js presets).
 export function buildQuadruped(o) {
   const coat = mat(o.color);
@@ -41,9 +98,16 @@ export function buildQuadruped(o) {
   body.add(shell);
   const girth = ((o.bodyScale?.[0] ?? 1) + (o.bodyScale?.[1] ?? 1)) / 2;
   const bodyCoat = painted('body', o.color, capsuleRepeat(o.bodyR, o.bodyLen, girth));
-  const torso = mesh(bodyCoat ? coatCapsule(o.bodyR, o.bodyLen) : capsule(o.bodyR, o.bodyLen), bodyCoat ?? coat, shell);
+  // `waist` slims the middle: a thinner torso between a full chest and hips (big cats).
+  const torsoR = o.bodyR * (o.waist ?? 1);
+  const torso = mesh(bodyCoat ? coatCapsule(torsoR, o.bodyLen) : capsule(torsoR, o.bodyLen), bodyCoat ?? coat, shell);
+  torso.position.y = (o.bodyR - torsoR) * 0.6; // tuck the belly up, keep the back line
   torso.rotation.x = Math.PI / 2;
-  const halfLen = o.bodyLen / 2 + o.bodyR;
+  const halfLen = o.bodyLen / 2 + torsoR;
+  if (o.waist) {
+    mesh(sphere(o.bodyR, 24, 18), coat, shell, 0, 0, o.bodyLen * 0.38).scale.set(1, 1, 1.35); // chest
+    mesh(sphere(o.bodyR * 0.92, 24, 18), coat, shell, 0, o.bodyR * 0.06, -o.bodyLen * 0.4).scale.set(1, 1, 1.3); // hips
+  }
 
   if (o.belly) {
     const belly = mesh(sphere(o.bodyR * 0.9), mat(o.belly), shell, 0, -o.bodyR * 0.25, 0);
@@ -64,6 +128,7 @@ export function buildQuadruped(o) {
     });
     // The four legs share one texture; turning each one makes their markings differ.
     if (legCoat) pivot.children[1].rotation.y = i * 1.9;
+    if (o.paws) mesh(sphere(o.legR * 1.2, 12, 8), legMat, pivot, 0, -(o.legLen + o.legR * 1.6), o.legR * 0.35).scale.set(1, 0.6, 1.35);
     if (o.hoof) mesh(geo(`hoof${o.legR}`, () => new THREE.CylinderGeometry(o.legR * 1.05, o.legR * 1.15, o.legR * 0.9, 10)), mat(o.hoof), pivot, 0, -(o.legLen + o.legR * 1.55), 0);
     legs.push(pivot);
   }
@@ -83,7 +148,28 @@ export function buildQuadruped(o) {
   neck.add(head);
   const headMesh = mesh(sphere(o.headR, 20, 14), painted('head', o.headColor ?? o.color) ?? mat(o.headColor ?? o.color), head);
   if (o.headScale) headMesh.scale.set(...o.headScale);
-  if (o.snout) {
+  if (o.snout?.pads) {
+    // Feline muzzle: a nose bridge, two puffy whisker pads, a small chin and a
+    // wide triangular nose on top. `r` sets the pad size, `long` how far it reaches.
+    const sn = o.snout;
+    const r = o.headR;
+    const long = sn.long ?? 1;
+    const padMat = mat(sn.color ?? o.color);
+    const front = r * sn.z;
+    const bridge = mesh(capsule(r * 0.2, r * 0.4), mat(o.headColor ?? o.color), head, 0, r * 0.12, front - r * 0.12);
+    bridge.rotation.x = Math.PI / 2 + 0.3;
+    bridge.scale.set(1.15, 1, 0.9);
+    const padR = r * sn.r * 0.6;
+    for (const s of [-1, 1]) {
+      mesh(sphere(padR, 14, 10), padMat, head, s * padR * 0.72, -r * 0.2, front + r * 0.12 * long).scale.set(1, 0.85, 0.9 * long);
+    }
+    mesh(sphere(padR * 0.75, 10, 8), padMat, head, 0, -r * 0.4, front).scale.set(1, 0.7, 0.9);
+    if (sn.nose) {
+      const nose = mesh(geo(`catNose${r}`, () => new THREE.ConeGeometry(r * 0.15, r * 0.16, 3)), mat(sn.nose), head, 0, r * 0.03, front + r * 0.32);
+      nose.rotation.x = Math.PI / 2; // apex forward, one corner pointing down
+      nose.scale.set(1.2, 0.6, 0.8);
+    }
+  } else if (o.snout) {
     const snout = mesh(sphere(o.headR * o.snout.r, 14, 10), mat(o.snout.color ?? o.color), head, 0, -o.headR * 0.2, o.headR * o.snout.z);
     snout.scale.set(1, 0.8, o.snout.long ?? 1);
     if (o.snout.nose) mesh(sphere(o.headR * 0.13, 8, 6), mat(o.snout.nose), head, 0, -o.headR * 0.05, o.headR * (o.snout.z + o.snout.r * (o.snout.long ?? 1) * 0.95));
@@ -94,6 +180,13 @@ export function buildQuadruped(o) {
   const earMat = mat(o.earColor ?? o.headColor ?? o.color);
   if (o.ears === 'round') {
     for (const s of [-1, 1]) mesh(sphere(o.headR * 0.3, 10, 8), earMat, head, s * o.headR * 0.62, o.headR * 0.72, -o.headR * 0.1).scale.set(1, 1, 0.5);
+  } else if (o.ears === 'feline') {
+    // Small rounded ears set wide on the head (big cats).
+    for (const s of [-1, 1]) {
+      const ear = mesh(sphere(o.headR * 0.24, 10, 8), earMat, head, s * o.headR * 0.68, o.headR * 0.66, -o.headR * 0.12);
+      ear.scale.set(1, 0.95, 0.42);
+      ear.rotation.z = -s * 0.5;
+    }
   } else if (o.ears === 'pointy') {
     for (const s of [-1, 1]) {
       const ear = mesh(geo(`pointy${o.headR}`, () => new THREE.ConeGeometry(o.headR * 0.3, o.headR * 0.55, 4)), earMat, head, s * o.headR * 0.5, o.headR * 0.85, -o.headR * 0.1);
@@ -126,15 +219,7 @@ export function buildQuadruped(o) {
   }
 
   // Features.
-  if (o.mane) {
-    const maneMat = mat(o.mane);
-    const ring = mesh(sphere(o.headR * 1.45, 18, 14), maneMat, head, 0, o.headR * 0.05, -o.headR * 0.35);
-    ring.scale.set(1, 1, 0.65);
-    for (let i = 0; i < 10; i++) {
-      const a = (i / 10) * Math.PI * 2;
-      mesh(sphere(o.headR * 0.42, 8, 6), maneMat, head, Math.cos(a) * o.headR * 1.35, Math.sin(a) * o.headR * 1.35, -o.headR * 0.35);
-    }
-  }
+  if (o.mane) addMane(head, neck, o.headR, neckR, neckLen, o.mane);
   if (o.crest) {
     // Short upright mane along the neck (zebra).
     const crest = mesh(geo(`crest${neckLen}`, () => new THREE.BoxGeometry(0.06, neckLen + 0.3, 0.14)), mat(o.crest), neck, 0, neckLen / 2 + 0.05, -neckR * 0.75);
