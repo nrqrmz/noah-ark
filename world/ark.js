@@ -167,7 +167,7 @@ export function createBlueprint({ length = 14 } = {}) {
   pitch.add(pitchMesh);
 
   // Tappable light points, one per part.
-  const pointGeo = new THREE.SphereGeometry(0.32, 16, 12);
+  const pointGeo = new THREE.SphereGeometry(0.45, 16, 12);
   const pointAt = { length: [0, -0.6], decks: [-L * 0.45, hullH / 2], window: [L * 0.3, top - 0.15], door: [dx, hullH * 0.43], pitch: [-L * 0.75, hullH * 0.2] };
   const points = {};
   for (const [name, [x, y]] of Object.entries(pointAt)) {
