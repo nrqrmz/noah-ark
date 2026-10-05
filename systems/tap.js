@@ -81,13 +81,23 @@ export function createTapSystem({ camera, dom, onTap }) {
     },
 
     // Screen position (client px) of a marked object's center, for dev tooling.
+    // Tries a few points on the object and returns the first one a tap there would hit.
     screenPoint(id) {
+      const rect = dom.getBoundingClientRect();
       for (const obj of marked.keys()) {
         if (obj.userData.tapId !== id) continue;
         const box = new THREE.Box3().setFromObject(obj);
-        const p = box.getCenter(new THREE.Vector3()).project(camera);
-        const rect = dom.getBoundingClientRect();
-        return { x: rect.left + ((p.x + 1) / 2) * rect.width, y: rect.top + ((1 - p.y) / 2) * rect.height };
+        const origin = obj.getWorldPosition(new THREE.Vector3());
+        const candidates = [box.getCenter(new THREE.Vector3())];
+        for (const up of [0.3, 0.6, 1, 1.5]) candidates.push(origin.clone().setY(origin.y + up));
+        for (const c of candidates) {
+          const ndc = c.clone().project(camera);
+          raycaster.setFromCamera(new THREE.Vector2(ndc.x, ndc.y), camera);
+          const hit = raycaster.intersectObjects([...marked.keys()], true)[0];
+          let o = hit?.object;
+          while (o && !o.userData.tapId) o = o.parent;
+          if (o === obj) return { x: rect.left + ((ndc.x + 1) / 2) * rect.width, y: rect.top + ((1 - ndc.y) / 2) * rect.height };
+        }
       }
       return null;
     },
