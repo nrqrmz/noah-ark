@@ -180,4 +180,4 @@ Each scene's state logic (what has been tapped, which step it's on) is split int
 - `.gitignore` includes `CLAUDE.md` and `.playwright-mcp/`.
 - `CLAUDE.md` (in English) summarizes the rules in this document (§2, §3, §5, §6, and the technical choice) for future sessions.
 - `.mcp.json` registers the project's Playwright server.
-- Spec, plan, and `CLAUDE.md` are written in English; commit messages in English.
+- **Everything in the repository is in English:** code, identifiers, code comments, specs, plans, `CLAUDE.md`, all Markdown, and commit messages. The only Spanish allowed is the story content readers see (`lang/es.json` and the "Español" button label).
