@@ -14,7 +14,7 @@ const PRESETS = {
   cow: {
     color: 0xf3efe8, bodyR: 0.42, bodyLen: 0.85, bodyY: 0.9, legR: 0.12, legLen: 0.36,
     headR: 0.3, snout: { r: 0.55, z: 0.7, color: 0xf2b8b0, nose: 0x8a5a55 }, ears: 'side',
-    neckLen: 0.12, neckAngle: 1.0, hoof: 0x4a3a30, horns: 0xf2e6c8, hornSpread: 1.0,
+    neckLen: 0.12, neckAngle: 1.0, hoof: 0x4a3a30, horns: { style: 'cow', color: 0xf2e6c8 },
     tail: { len: 0.6, r: 0.035, angle: -2.9, tuft: 0x3b3230 },
     coat: { kind: 'spots', mark: 0x3b3230, parts: { body: 7 } },
   },
@@ -32,9 +32,9 @@ const PRESETS = {
     tail: { len: 0.01, r: 0.01, angle: -1.6, puff: 0.08, color: 0xffffff },
   },
   goat: {
-    color: 0xf0ece4, bodyR: 0.27, bodyLen: 0.45, bodyY: 0.62, legR: 0.07, legLen: 0.3,
+    color: 0xf0ece4, bodyR: 0.21, bodyLen: 0.5, bodyY: 0.74, legR: 0.055, legLen: 0.42,
     headR: 0.2, headScale: [0.95, 1, 1.15], snout: { r: 0.5, z: 0.72, color: 0xe8e2d6, nose: 0x9a8a80 }, ears: 'side',
-    neckLen: 0.15, neckAngle: 0.5, horns: 0xb59a73, hornSpread: 0.2, goatee: 0xd8d0c0, hoof: 0x5a4a40,
+    neckLen: 0.15, neckAngle: 0.5, horns: { style: 'goat', color: 0xb59a73 }, goatee: 0xd8d0c0, hoof: 0x5a4a40,
     tail: { len: 0.14, r: 0.035, angle: -0.8 },
   },
   elephant: {
@@ -86,11 +86,24 @@ function femaleOverrides(id) {
   return {};
 }
 
+// Male variations: the bull is the cow's husband, so it is built from the cow preset.
+function maleOverrides(id) {
+  if (id === 'cow') {
+    // Bull: solid dark brown with no spots, heavier shoulders, big forward-curving horns.
+    return {
+      color: 0x4a2e1f, coat: null, bodyScale: [1.05, 1.05], hump: true, eyes: { ring: true }, // white rings keep the eyes readable
+      snout: { ...PRESETS.cow.snout, color: 0x5e3b28, nose: 0x2a1a12 },
+      horns: { style: 'bull', color: 0xe8dcc0 }, tail: { ...PRESETS.cow.tail, tuft: 0x2a1a12 },
+    };
+  }
+  return {};
+}
+
 export function createAnimal(id, sex = 'male') {
   let model;
   if (id === 'crocodile') model = buildCrocodile();
   else if (id === 'dove' || id === 'raven') model = buildBird(id);
-  else model = buildQuadruped({ ...PRESETS[id], ...(sex === 'female' ? femaleOverrides(id) : {}) });
+  else model = buildQuadruped({ ...PRESETS[id], ...(sex === 'female' ? femaleOverrides(id) : maleOverrides(id)) });
   if (sex === 'female') {
     model.root.scale.setScalar(0.88);
     model.radius *= 0.88;

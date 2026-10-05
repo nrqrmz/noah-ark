@@ -87,6 +87,44 @@ function addMane(head, neck, r, neckR, neckLen, hex) {
   }
 }
 
+// Horn shapes in head-radius units, for the horn on the +X side (mirrored for -X):
+// where the base sits (inside the head), its base radius, and four segments
+// (direction, length) that bend the horn along a curve to a point.
+const HORNS = {
+  // Cow: short, out to the side then up.
+  cow: { base: [0.45, 0.78, -0.15], r: 0.13, segs: [[[1, 0.3, 0], 0.3], [[0.8, 0.8, 0], 0.24], [[0.25, 1, 0], 0.2], [[-0.1, 1, 0.05], 0.17]] },
+  // Bull: long and thick, out sideways then curving forward.
+  bull: { base: [0.45, 0.78, -0.15], r: 0.17, segs: [[[1, 0.2, 0], 0.42], [[1, 0.3, 0.3], 0.38], [[0.5, 0.35, 1], 0.34], [[0, 0.3, 1], 0.28]] },
+  // Goat: long, up then sweeping back over the neck.
+  goat: { base: [0.3, 0.78, -0.05], r: 0.15, segs: [[[0.1, 1, -0.1], 0.6], [[0.15, 0.75, -0.75], 0.55], [[0.15, 0.1, -1], 0.5], [[0.1, -0.5, -1], 0.42]] },
+};
+
+// A curved horn on each side of the head: tapering segments joined by spheres,
+// the last one a cone ending in a point. The base sphere sits inside the head.
+function addHorns(head, r, { style, color }) {
+  const shape = HORNS[style];
+  const material = mat(color);
+  const up = new THREE.Vector3(0, 1, 0);
+  for (const s of [-1, 1]) {
+    const p = new THREE.Vector3(s * shape.base[0] * r, shape.base[1] * r, shape.base[2] * r);
+    let rad = shape.r * r;
+    mesh(sphere(rad, 12, 10), material, head, p.x, p.y, p.z);
+    shape.segs.forEach(([d, len], i) => {
+      const last = i === shape.segs.length - 1;
+      const dir = new THREE.Vector3(s * d[0], d[1], d[2]).normalize();
+      const length = len * r;
+      const next = last ? 0 : shape.r * r * (1 - (i + 1) * 0.2);
+      const key = `horn${rad.toFixed(4)}:${next.toFixed(4)}:${length.toFixed(4)}`;
+      const seg = mesh(geo(key, () => new THREE.CylinderGeometry(next, rad, length, 12)), material, head);
+      seg.quaternion.setFromUnitVectors(up, dir);
+      seg.position.copy(p).addScaledVector(dir, length / 2);
+      p.addScaledVector(dir, length);
+      if (!last) mesh(sphere(next, 12, 10), material, head, p.x, p.y, p.z); // smooth the bend
+      rad = next;
+    });
+  }
+}
+
 // Builds a four-legged animal facing +Z from a parameter set (see index.js presets).
 export function buildQuadruped(o) {
   const coat = mat(o.color);
@@ -255,12 +293,11 @@ export function buildQuadruped(o) {
     const crest = mesh(geo(`crest${neckLen}`, () => new THREE.BoxGeometry(0.06, neckLen + 0.3, 0.14)), mat(o.crest), neck, 0, neckLen / 2 + 0.05, -neckR * 0.75);
     crest.castShadow = true;
   }
-  if (o.horns) {
-    for (const s of [-1, 1]) {
-      const horn = mesh(geo(`horn${o.headR}`, () => new THREE.ConeGeometry(o.headR * 0.12, o.headR * 0.55, 8)), mat(o.horns), head, s * o.headR * 0.4, o.headR * 0.9, -o.headR * 0.15);
-      horn.rotation.z = -s * (o.hornSpread ?? 0.35);
-      horn.rotation.x = -0.2;
-    }
+  if (o.horns) addHorns(head, o.headR, o.horns);
+  if (o.hump) {
+    // Bull's shoulder hump: centered inside the front-top of the body, swelling above the back.
+    const hump = mesh(sphere(o.bodyR * 0.7, 20, 14), coat, shell, 0, o.bodyR * 0.55, o.bodyLen * 0.25);
+    hump.scale.set(1, 1, 1.25);
   }
   if (o.ossicones) {
     for (const s of [-1, 1]) {
