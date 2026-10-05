@@ -97,6 +97,13 @@ The 4 trees and the gradual ark build stay.
 - Scene 5: animal/food data still consistent (including if horses replace the zebra).
 - Scene 8: slot layout has no overlaps and stays inside each sector; a group can be called only after the previous one settled.
 
-**Visual (Claude, Playwright MCP):** every changed scene at phone portrait, rotated phone, and desktop sizes; no console errors; nothing passes through anything; tap each scene in more than one order. The gallery shows every changed animal and food.
+**Playwright (Claude, via the Playwright MCP server):** every task that changes a scene or a model ends with a Playwright check before it counts as done, and its screenshots are attached to the task report:
+- Serve with `python3 -m http.server 8000` and drive `http://localhost:8000/` (scenes) and `/gallery.html` (models).
+- Sizes: phone portrait (390×844), rotated phone (844×390), desktop (1440×900).
+- Taps are made in the browser, in more than one order: scene 1 (A before B and B before A), scene 2 (left-to-right and right-to-left), scene 4 (trees in order and out of order), scene 8 (all four groups).
+- Screenshots at key moments: each scene 1 event, each scene 2 reaction and the empty square, the sons mid-walk in scene 4, every changed animal and food in the gallery, each scene 8 group settled, and the rainbow with no haze band.
+- Checks: no console errors; nothing passes through anything; tappables respond across the enlarged food tap area; "Next" appears only at the end.
+
+Playwright is not added as a project dependency (no `package.json`, per `CLAUDE.md`); it runs only through the MCP server.
 
 **Manual (the user):** the zebra checkpoint, and taste overall (how the lions, goats and bull look; scene 8 pacing).
