@@ -38,7 +38,7 @@ const PRESETS = {
     // A long narrow face on an upright neck; eyes on the sides of the skull.
     headR: 0.14, headScale: [0.82, 0.95, 1.05], snout: { caprine: true, len: 1.1, tilt: 0.4, color: 0xe8e2d6, nose: 0x5a4a44, nostril: 0x1e1612 },
     eyes: { forward: 0.62, up: 0.3, side: 0.62, size: 0.17 }, ears: 'side',
-    neckLen: 0.44, neckR: 0.06, neckAngle: 0.4, horns: { style: 'goat', color: 0xb59a73 }, goatee: 0xd8d0c0, hoof: 0x5a4a40,
+    neckLen: 0.33, neckR: 0.06, neckAngle: 0.4, horns: { style: 'goat', color: 0xb59a73 }, goatee: 0xd8d0c0, hoof: 0x5a4a40,
     tail: { len: 0.14, r: 0.035, angle: -0.8 },
   },
   elephant: {
