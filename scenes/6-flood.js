@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { createFloodState, FAMILY_IDS, DOOR_TIME, RAIN_TIME } from './state/flood.js';
-import { createLandscape, disposeTree, keepApart, createBoarding } from './common.js';
+import { createLandscape, disposeTree, keepApart, createBoarding, circle } from './common.js';
 import { createPerson, familyLook, updatePerson } from '../characters/people.js';
 import { createArk } from '../world/ark.js';
 import { createWater } from '../world/terrain.js';
@@ -18,6 +18,7 @@ const lerp = (a, b, t) => a + (b - a) * t;
 export default function createScene(ctx) {
   const state = createFloodState();
   const people = [];
+  const queue = []; // people walking aboard, in the order they were tapped
   let landscape;
   let ark;
   let boarder;
@@ -75,20 +76,26 @@ export default function createScene(ctx) {
         }
       }
 
+      // Those walking aboard go single file and are fixed obstacles for the rest.
       const solid = [];
+      const walking = [];
+      let ahead = null;
       for (const person of people) {
         const { p } = person;
         if (!person.walking) {
           updatePerson(p, dt);
           solid.push(p);
-          continue;
         }
-        if (!p.root.visible) continue;
-        const phase = boarder.step(p, 3.2, dt);
-        updatePerson(p, dt, { moving: phase === 'ground' || phase === 'ramp' });
-        if (phase === 'ground') solid.push(p);
       }
-      keepApart(solid, obstacles);
+      for (const person of queue) {
+        const { p } = person;
+        if (!p.root.visible) continue;
+        const phase = boarder.step(p, 3.2, dt, { ahead });
+        updatePerson(p, dt, { moving: phase === 'ground' || phase === 'ramp' });
+        walking.push(circle(p));
+        ahead = p;
+      }
+      keepApart(solid, [...obstacles, ...walking]);
 
       // God shuts the door, in light.
       if (doorT >= 0 && doorT < DOOR_TIME + 1) {
@@ -129,6 +136,7 @@ export default function createScene(ctx) {
       ctx.tap.unmark(person.p.root);
       person.walking = true;
       person.p.walk = { delay: 0, points: boarder.path() };
+      queue.push(person);
     },
     isLocked: () => state.locked,
     isDone: () => state.done,

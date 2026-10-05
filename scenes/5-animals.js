@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { createAnimalsState } from './state/animals.js';
-import { createLandscape, disposeTree, keepApart, createBoarding } from './common.js';
+import { createLandscape, disposeTree, keepApart, createBoarding, circle } from './common.js';
 import { animalsInRound, foodsForRound } from '../characters/animals/data.js';
 import { createAnimal, updateAnimal } from '../characters/animals/index.js';
 import { createPerson, familyLook, updatePerson, facePoint } from '../characters/people.js';
@@ -86,6 +86,7 @@ export default function createScene(ctx) {
       landscape.update(dt);
       for (const ev of state.tick(dt)) {
         if (ev.startsWith('round:')) spawnRound(Number(ev.split(':')[1]));
+        if (ev === 'allAboard') for (const f of foods) f.obj.visible = false; // the food goes aboard too
       }
       const solid = [];
       for (const pair of pairs) {
@@ -96,14 +97,20 @@ export default function createScene(ctx) {
           solid.push(a);
         }
       }
+      // Walkers go single file; for everyone else they are fixed obstacles,
+      // so big animals never push each other into a standstill.
+      const walking = [];
+      let ahead = null;
       for (const a of boarding) {
         if (!a.root.visible) continue;
-        const phase = boarder.step(a, a.wings ? 5.5 : 4.8, dt, { flying: !!a.wings });
+        const phase = boarder.step(a, a.wings ? 5.5 : 4.8, dt, { flying: !!a.wings, ahead: a.wings ? null : ahead });
         updateAnimal(a, dt, { moving: phase === 'ground' || phase === 'ramp', fly: !!a.wings });
-        // Still on the ground heading for the ramp: solid like everyone else.
-        if (phase === 'ground' && !a.wings) solid.push(a);
+        if (!a.wings && a.walk.delay <= 0) {
+          walking.push(circle(a));
+          ahead = a;
+        }
       }
-      keepApart([noah, ...solid], obstacles);
+      keepApart([noah, ...solid], [...obstacles, ...walking]);
       // The selected food bobs above the others.
       t += dt;
       for (const f of foods) {

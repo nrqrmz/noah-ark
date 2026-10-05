@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { separate, queuePositions } from '../systems/solid.js';
+import { separate, queuePositions, queueClear } from '../systems/solid.js';
 
 const dist = (a, b) => Math.hypot(a.x - b.x, a.z - b.z);
 
@@ -41,4 +41,24 @@ test('queuePositions spaces items exactly', () => {
   assert.equal(pts.length, 4);
   assert.deepEqual(pts[0], { x: 1, z: 2 });
   for (let i = 1; i < pts.length; i++) assert.ok(Math.abs(dist(pts[i - 1], pts[i]) - 1.5) < 1e-9);
+});
+
+test('bodies crowding a fixed obstacle never move it', () => {
+  const walker = { x: 0, z: 0, r: 1.3 };
+  const crowd = Array.from({ length: 5 }, (_, i) => ({ x: 0.2 * i, z: 0.1, r: 0.9 }));
+  separate(crowd, [walker], 20);
+  assert.deepEqual(walker, { x: 0, z: 0, r: 1.3 });
+  for (const b of crowd) assert.ok(dist(b, walker) >= 2.2 - 1e-6);
+});
+
+test('a walker waits while the one ahead is too close', () => {
+  assert.equal(queueClear({ x: 0, z: 0, r: 1 }, { x: 1, z: 0, r: 1 }), false);
+});
+
+test('a walker advances once the one ahead has moved on', () => {
+  assert.equal(queueClear({ x: 0, z: 0, r: 1 }, { x: 2, z: 0, r: 1 }), true);
+});
+
+test('a walker with nobody ahead always advances', () => {
+  assert.equal(queueClear({ x: 0, z: 0, r: 1 }, null), true);
 });

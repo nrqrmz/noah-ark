@@ -75,6 +75,19 @@
     @media (orientation: landscape) {
       #page-text { font-size: clamp(16px, 1.9vw, 24px); }
     }
+    /* Short screens: give the text a little more room and tighten the type. */
+    @media (orientation: portrait) and (max-height: 700px) {
+      #app { grid-template: "stage" 54fr "panel" 46fr / 1fr; }
+      #page-text { font-size: 15px; line-height: 1.36; }
+      #panel { padding-top: 12px; }
+    }
+    @media (orientation: landscape) and (max-height: 430px) {
+      #app { grid-template: "panel stage" 1fr / 42fr 58fr; }
+      #page-text { font-size: clamp(13px, 3.7vh, 18px); line-height: 1.32; }
+      #panel { padding-top: calc(10px + env(safe-area-inset-top)); }
+      #panel-footer { padding-top: 6px; }
+      .btn { padding: 9px 20px; font-size: 16px; }
+    }
     #page-ref {
       margin-top: 8px;
       font-family: Georgia, serif; font-style: italic;

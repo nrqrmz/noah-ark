@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { createGround, createHills } from '../world/terrain.js';
 import { createClouds, setSky } from '../world/sky.js';
-import { separate } from '../systems/solid.js';
+import { separate, queueClear } from '../systems/solid.js';
 
 // Frees every geometry/material under `root` except the shared character cache.
 export function disposeTree(root) {
@@ -67,9 +67,10 @@ export function createBoarding(rampFoot, doorPoint) {
       doorPoint.clone(),
       doorPoint.clone().add(new THREE.Vector3(0, 0, -1.2)),
     ],
-    // Advances `walker` ({ root, radius, walk: { delay, points } }) along its path.
-    // Returns 'waiting' | 'ground' | 'ramp' | 'inside'.
-    step(walker, speed, dt, { flying = false } = {}) {
+    // Advances `walker` ({ root, radius, walk: { delay, points } }) along its path,
+    // single file behind `ahead` (the walker in front, if any).
+    // Returns 'waiting' | 'queued' | 'ground' | 'ramp' | 'inside'.
+    step(walker, speed, dt, { flying = false, ahead = null } = {}) {
       const w = walker.walk;
       if (w.delay > 0) {
         w.delay -= dt;
@@ -81,6 +82,8 @@ export function createBoarding(rampFoot, doorPoint) {
       }
       const pos = walker.root.position;
       const target = w.points[0];
+      const front = ahead && ahead.root.visible && ahead.walk.delay <= 0 ? ahead : null;
+      if (!flying && front && !queueClear(circle(walker), circle(front))) return 'queued';
       // On the ground, "close enough" counts as arrived: two big characters heading
       // for the same spot would otherwise push each other forever.
       const onGround = w.points.length >= 3;
@@ -95,4 +98,9 @@ export function createBoarding(rampFoot, doorPoint) {
       return onGround ? 'ground' : 'ramp';
     },
   };
+}
+
+// Ground circle of a character, for solidity.
+export function circle(c) {
+  return { x: c.root.position.x, z: c.root.position.z, r: c.radius };
 }

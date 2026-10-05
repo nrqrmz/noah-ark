@@ -62,3 +62,10 @@ export function queuePositions(start, dir, count, spacing) {
     z: start.z + uz * spacing * i,
   }));
 }
+
+// Queue rule for characters walking single file: move only when the one ahead
+// has left enough room (`slack` lets them walk a little closer than touching).
+export function queueClear(me, ahead, slack = 0.85) {
+  if (!ahead) return true;
+  return Math.hypot(ahead.x - me.x, ahead.z - me.z) >= (me.r + ahead.r) * slack;
+}
