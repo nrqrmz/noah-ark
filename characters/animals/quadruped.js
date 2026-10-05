@@ -96,7 +96,8 @@ const HORNS = {
   // Bull: long and thick, out sideways then curving forward.
   bull: { base: [0.42, 0.68, -0.15], r: 0.17, segs: [[[1, 0.2, 0], 0.42], [[1, 0.3, 0.3], 0.38], [[0.5, 0.35, 1], 0.34], [[0, 0.3, 1], 0.28]] },
   // Goat: long, up then sweeping back over the neck.
-  goat: { base: [0.3, 0.78, -0.05], r: 0.15, segs: [[[0.1, 1, -0.1], 0.6], [[0.15, 0.75, -0.75], 0.55], [[0.15, 0.1, -1], 0.5], [[0.1, -0.5, -1], 0.42]] },
+  // A rounded tip: from the side the far horn's needle point showed as a fork.
+  goat: { base: [0.28, 0.8, -0.1], r: 0.24, roundTip: true, segs: [[[0.05, 1, -0.1], 0.85], [[0.08, 0.75, -0.75], 0.75], [[0.04, 0.1, -1], 0.68], [[0.02, -0.4, -1], 0.5]] },
 };
 
 // A curved horn on each side of the head: tapering segments joined by spheres,
@@ -113,13 +114,13 @@ function addHorns(head, r, { style, color }) {
       const last = i === shape.segs.length - 1;
       const dir = new THREE.Vector3(s * d[0], d[1], d[2]).normalize();
       const length = len * r;
-      const next = last ? 0 : shape.r * r * (1 - (i + 1) * 0.2);
+      const next = last ? (shape.roundTip ? rad * 0.55 : 0) : shape.r * r * (1 - (i + 1) * 0.2);
       const key = `horn${rad.toFixed(4)}:${next.toFixed(4)}:${length.toFixed(4)}`;
       const seg = mesh(geo(key, () => new THREE.CylinderGeometry(next, rad, length, 12)), material, head);
       seg.quaternion.setFromUnitVectors(up, dir);
       seg.position.copy(p).addScaledVector(dir, length / 2);
       p.addScaledVector(dir, length);
-      if (!last) mesh(sphere(next, 12, 10), material, head, p.x, p.y, p.z); // smooth the bend
+      if (next > 0) mesh(sphere(next, 12, 10), material, head, p.x, p.y, p.z); // smooth the bend (or round the tip)
       rad = next;
     });
   }
@@ -175,24 +176,28 @@ export function buildQuadruped(o) {
 
   // Legs: pivots inside the body volume, hooves/paws at the end.
   const legMat = mat(o.legColor ?? o.color);
-  const legCoat = painted('legs', o.legColor ?? o.color, capsuleRepeat(o.legR, o.legLen));
   const legY = o.bodyY - o.bodyR * 0.45;
+  // The leg reaches from its pivot down to the ground: every foot touches y = 0.
+  // Below the capsule end a paw hangs 0.32·legR lower; a hoof ends where the capsule does.
+  const footDrop = o.legR * (o.paws ? 2.32 : 2);
+  const legLen = legY - footDrop;
+  const legCoat = painted('legs', o.legColor ?? o.color, capsuleRepeat(o.legR, legLen));
   // `legTaper` (bottom/top radius) gives thick upper legs slimming toward the paw;
   // its ends hide inside the joint sphere and the paw.
   const legShape = o.legTaper && !legCoat
-    ? geo(`taperLeg${o.legR}:${o.legLen}:${o.legTaper}`, () => new THREE.CylinderGeometry(o.legR * 1.15, o.legR * o.legTaper, o.legLen + o.legR * 2, 14))
+    ? geo(`taperLeg${o.legR}:${legLen}:${o.legTaper}`, () => new THREE.CylinderGeometry(o.legR * 1.15, o.legR * o.legTaper, legLen + o.legR * 2, 14))
     : undefined;
   const legs = [];
   for (const [i, [x, z]] of [[-1, 1], [1, 1], [-1, -1], [1, -1]].entries()) {
     const pivot = addLimb(body, {
       x: x * legX, y: legY, z: z * legZ,
-      radius: o.legR, length: o.legLen, material: legCoat ?? legMat, jointRadius: o.legR * 1.25,
-      jointMaterial: legMat, geometry: legCoat ? coatCapsule(o.legR, o.legLen) : legShape,
+      radius: o.legR, length: legLen, material: legCoat ?? legMat, jointRadius: o.legR * 1.25,
+      jointMaterial: legMat, geometry: legCoat ? coatCapsule(o.legR, legLen) : legShape,
     });
     // The four legs share one texture; turning each one makes their markings differ.
     if (legCoat) pivot.children[1].rotation.y = i * 1.9;
-    if (o.paws) mesh(sphere(o.legR * 1.2, 12, 8), legMat, pivot, 0, -(o.legLen + o.legR * 1.6), o.legR * 0.35).scale.set(1, 0.6, 1.35);
-    if (o.hoof) mesh(geo(`hoof${o.legR}`, () => new THREE.CylinderGeometry(o.legR * 1.05, o.legR * 1.15, o.legR * 0.9, 10)), mat(o.hoof), pivot, 0, -(o.legLen + o.legR * 1.55), 0);
+    if (o.paws) mesh(sphere(o.legR * 1.2, 12, 8), legMat, pivot, 0, -(legLen + o.legR * 1.6), o.legR * 0.35).scale.set(1, 0.6, 1.35);
+    if (o.hoof) mesh(geo(`hoof${o.legR}`, () => new THREE.CylinderGeometry(o.legR * 1.05, o.legR * 1.15, o.legR * 0.9, 10)), mat(o.hoof), pivot, 0, -(legLen + o.legR * 1.55), 0);
     legs.push(pivot);
   }
 
@@ -252,27 +257,31 @@ export function buildQuadruped(o) {
       n.rotation.z = s * 0.45; // tipped toward each other, like a cow's nostrils
     }
   } else if (o.snout?.caprine) {
-    // Goat muzzle: a narrow muzzle tapering forward and a little down from the long
-    // face, a small dark nose pad with two nostrils at its tip, and a mouth line below.
+    // Goat face: a long, narrow wedge running forward and down from the skull,
+    // ending in a dark nose pad with two nostrils on its front and a mouth line below.
     const r = o.headR;
     const sn = o.snout;
-    const tilt = 0.35;
-    const dir = new THREE.Vector3(0, -Math.sin(tilt), Math.cos(tilt));
-    const center = new THREE.Vector3(0, -r * 0.22, r * sn.z);
-    const muzzle = mesh(capsule(r * 0.34, r * 0.75), mat(sn.color ?? o.color), head, center.x, center.y, center.z);
-    muzzle.rotation.x = Math.PI / 2 + tilt;
-    muzzle.scale.set(0.72, 1, 0.82); // narrow and a bit flat
-    const tip = center.clone().addScaledVector(dir, r * 0.64);
-    const pad = mesh(sphere(r * 0.18, 12, 10), mat(sn.nose), head, tip.x, tip.y, tip.z);
-    pad.rotation.x = tilt;
-    pad.scale.set(1.1, 0.8, 0.6);
+    const muzzle = new THREE.Group();
+    muzzle.position.set(0, -r * 0.1, r * 0.2); // starts inside the skull
+    muzzle.rotation.x = sn.tilt ?? 0.45; // nose down
+    head.add(muzzle);
+    const len = r * sn.len;
+    const back = r * 0.66;
+    const front = r * 0.42;
+    const faceMat = mat(sn.color ?? o.color);
+    const wedge = mesh(geo(`goatFace${r}:${len}`, () => new THREE.CylinderGeometry(front, back, len, 16)), faceMat, muzzle, 0, 0, len / 2);
+    wedge.rotation.x = Math.PI / 2; // narrow end forward
+    wedge.scale.set(0.78, 1, 0.92); // narrow side to side
+    mesh(sphere(front, 14, 10), faceMat, muzzle, 0, 0, len).scale.set(0.78, 0.92, 0.8); // rounded snout end
+    const pad = mesh(sphere(front * 0.75, 12, 10), mat(sn.nose), muzzle, 0, front * 0.15, len + front * 0.55);
+    pad.scale.set(1, 0.75, 0.55);
     const nostril = mat(sn.nostril);
     for (const s of [-1, 1]) {
-      const n = mesh(sphere(r * 0.045, 8, 6), nostril, head, s * r * 0.08, tip.y + r * 0.01, tip.z + r * 0.1);
-      n.scale.set(0.8, 1.2, 0.6);
+      const n = mesh(sphere(front * 0.2, 8, 6), nostril, muzzle, s * front * 0.3, front * 0.15, len + front * 0.92);
+      n.scale.set(0.75, 1.25, 0.5);
       n.rotation.z = s * 0.4;
     }
-    const mouth = mesh(capsule(r * 0.02, r * 0.16), nostril, head, 0, tip.y - r * 0.15, tip.z - r * 0.02);
+    const mouth = mesh(capsule(r * 0.022, front * 0.7), nostril, muzzle, 0, -front * 0.62, len + front * 0.45);
     mouth.rotation.z = Math.PI / 2;
   } else if (o.snout) {
     const snout = mesh(sphere(o.headR * o.snout.r, 14, 10), mat(o.snout.color ?? o.color), head, 0, -o.headR * 0.2, o.headR * o.snout.z);
@@ -344,7 +353,7 @@ export function buildQuadruped(o) {
     }
   }
   if (o.goatee) {
-    const g = mesh(geo(`goatee${o.headR}`, () => new THREE.ConeGeometry(o.headR * 0.14, o.headR * 0.5, 6)), mat(o.goatee), head, 0, -o.headR * 0.85, o.headR * 0.55);
+    const g = mesh(geo(`goatee${o.headR}`, () => new THREE.ConeGeometry(o.headR * 0.16, o.headR * 0.6, 6)), mat(o.goatee), head, 0, -o.headR * 0.85, o.headR * 0.8);
     g.rotation.x = Math.PI;
   }
   let trunk = null;

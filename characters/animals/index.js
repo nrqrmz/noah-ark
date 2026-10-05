@@ -6,13 +6,13 @@ import { buildBird } from './bird.js';
 // Parameter sets for every four-legged species. Units: a person is 1.8 tall.
 const PRESETS = {
   lion: {
-    color: 0xd9a650, bodyR: 0.27, bodyLen: 0.56, bodyY: 0.8, bodyScale: [0.88, 1], waist: 0.8, legR: 0.08, legLen: 0.42, legTaper: 0.65,
+    color: 0xd9a650, bodyR: 0.27, bodyLen: 0.56, bodyY: 0.8, bodyScale: [0.88, 1], waist: 0.8, legR: 0.08, legTaper: 0.65,
     headR: 0.23, headScale: [1, 0.92, 1.12], snout: { pads: true, r: 0.45, z: 0.95, long: 1.1, color: 0xf2dcae, nose: 0x5a3a2a },
     ears: 'feline', eyes: { forward: 0.95, up: 0.22, side: 0.42, size: 0.14 }, neckLen: 0.16, neckR: 0.13, neckAngle: 0.75, paws: true,
     tail: { len: 0.7, r: 0.035, angle: -2.3, tuft: 0x8a4d1e }, mane: 0x9a5422, gait: 9,
   },
   cow: {
-    color: 0xf3efe8, bodyR: 0.42, bodyLen: 0.85, bodyY: 0.9, legR: 0.12, legLen: 0.36,
+    color: 0xf3efe8, bodyR: 0.42, bodyLen: 0.85, bodyY: 0.9, legR: 0.12,
     // A long, boxy head with a broad flat muzzle; ears out to the sides below the horns.
     headR: 0.3, headScale: [0.9, 0.9, 1.3], snout: { bovine: true, z: 1.22, color: 0xf2b8b0, nostril: 0x6a3a3a },
     eyes: { forward: 0.9, up: 0.3, side: 0.5, size: 0.13 }, ears: 'side',
@@ -21,45 +21,46 @@ const PRESETS = {
     coat: { kind: 'spots', mark: 0x3b3230, parts: { body: 7 } },
   },
   giraffe: {
-    color: 0xeec46b, bodyR: 0.36, bodyLen: 0.6, bodyY: 1.55, legR: 0.09, legLen: 1.0,
+    color: 0xeec46b, bodyR: 0.36, bodyLen: 0.6, bodyY: 1.55, legR: 0.09,
     headR: 0.25, headScale: [0.9, 0.9, 1.25], snout: { r: 0.5, z: 0.7, color: 0xe8b65a, nose: 0x6b4a2b }, ears: 'side',
     neckLen: 1.3, neckR: 0.13, neckAngle: 0.35, ossicones: 0x6b4a2b, hoof: 0x5a4030,
     coat: { kind: 'patches', mark: 0xa86a32, parts: { body: 36, neck: 18, legs: 14 } },
     tail: { len: 0.5, r: 0.03, angle: -2.8, tuft: 0x5a4030 }, crest: 0xa86a32,
   },
   rabbit: {
-    color: 0xd9cfc4, bodyR: 0.17, bodyLen: 0.12, bodyY: 0.24, legR: 0.055, legLen: 0.06,
+    color: 0xd9cfc4, bodyR: 0.17, bodyLen: 0.12, bodyY: 0.24, legR: 0.055,
     headR: 0.15, snout: { r: 0.4, z: 0.75, color: 0xf2ebe4, nose: 0xe39aa6 }, ears: 'long', earColor: 0xe7c9c4,
     neckLen: 0.02, neckAngle: 0.3, gait: 11,
     tail: { len: 0.01, r: 0.01, angle: -1.6, puff: 0.08, color: 0xffffff },
   },
   goat: {
-    color: 0xf0ece4, bodyR: 0.21, bodyLen: 0.5, bodyY: 0.74, legR: 0.055, legLen: 0.42,
-    headR: 0.2, headScale: [0.8, 0.9, 1.35], snout: { caprine: true, z: 1.02, color: 0xe8e2d6, nose: 0x6a5a52, nostril: 0x2a201c },
-    eyes: { forward: 0.92, up: 0.3, side: 0.5, size: 0.15 }, ears: 'side',
-    neckLen: 0.15, neckAngle: 0.5, horns: { style: 'goat', color: 0xb59a73 }, goatee: 0xd8d0c0, hoof: 0x5a4a40,
+    color: 0xf0ece4, bodyR: 0.21, bodyLen: 0.5, bodyY: 0.74, legR: 0.055,
+    // A long narrow face on an upright neck; eyes on the sides of the skull.
+    headR: 0.14, headScale: [0.82, 0.95, 1.05], snout: { caprine: true, len: 1.1, tilt: 0.4, color: 0xe8e2d6, nose: 0x5a4a44, nostril: 0x1e1612 },
+    eyes: { forward: 0.62, up: 0.3, side: 0.62, size: 0.17 }, ears: 'side',
+    neckLen: 0.44, neckR: 0.06, neckAngle: 0.4, horns: { style: 'goat', color: 0xb59a73 }, goatee: 0xd8d0c0, hoof: 0x5a4a40,
     tail: { len: 0.14, r: 0.035, angle: -0.8 },
   },
   elephant: {
-    color: 0x9aa3ad, bodyR: 0.7, bodyLen: 0.75, bodyY: 1.25, bodyScale: [1.05, 1], legR: 0.22, legLen: 0.5,
+    color: 0x9aa3ad, bodyR: 0.7, bodyLen: 0.75, bodyY: 1.25, bodyScale: [1.05, 1], legR: 0.22,
     headR: 0.55, ears: 'big', earColor: 0x8e97a1, trunk: true, hoof: 0xd9d4c6,
     neckLen: 0.05, neckAngle: 0.2, eyes: { forward: 0.82, up: 0.2, side: 0.45, size: 0.09 },
     tail: { len: 0.55, r: 0.04, angle: -2.9, tuft: 0x5d646c }, gait: 5,
   },
   dog: {
-    color: 0xc8955a, bodyR: 0.2, bodyLen: 0.32, bodyY: 0.45, legR: 0.07, legLen: 0.17,
+    color: 0xc8955a, bodyR: 0.2, bodyLen: 0.32, bodyY: 0.45, legR: 0.07,
     headR: 0.19, snout: { r: 0.5, z: 0.75, long: 1.25, color: 0xe6c393, nose: 0x2a1e18 }, ears: 'floppy', earColor: 0x8a5a32,
     neckLen: 0.08, neckAngle: 0.7, belly: 0xe6c393,
     tail: { len: 0.3, r: 0.04, angle: -0.6 }, gait: 10,
   },
   cat: {
-    color: 0xe8862a, bodyR: 0.14, bodyLen: 0.24, bodyY: 0.3, legR: 0.045, legLen: 0.12,
+    color: 0xe8862a, bodyR: 0.14, bodyLen: 0.24, bodyY: 0.3, legR: 0.045,
     headR: 0.15, snout: { r: 0.35, z: 0.78, color: 0xf6dcb4, nose: 0xe39aa6 }, ears: 'pointy',
     neckLen: 0.04, neckAngle: 0.6, coat: { kind: 'stripes', mark: 0xb85c14, parts: { body: 7, legs: 4 } },
     tail: { len: 0.36, r: 0.03, angle: -0.35 }, gait: 10,
   },
   zebra: {
-    color: 0xf7f7f2, bodyR: 0.37, bodyLen: 0.75, bodyY: 0.95, legR: 0.09, legLen: 0.45,
+    color: 0xf7f7f2, bodyR: 0.37, bodyLen: 0.75, bodyY: 0.95, legR: 0.09,
     headR: 0.24, headScale: [0.9, 0.95, 1.35], snout: { r: 0.5, z: 0.8, color: 0x2a2a2a }, ears: 'pointy',
     neckLen: 0.35, neckR: 0.15, neckAngle: 0.6, hoof: 0x2a2a2a, crest: 0x1f1f1f,
     tail: { len: 0.55, r: 0.035, angle: -2.8, tuft: 0x1f1f1f },
@@ -95,7 +96,7 @@ function maleOverrides(id) {
     // Bull: solid dark brown with no spots, heavier shoulders, big forward-curving horns.
     return {
       color: 0x4a2e1f, coat: null, bodyScale: [1.05, 1.05], hump: true,
-      snout: { ...PRESETS.cow.snout, color: 0x3a2418, nostril: 0x0f0805 },
+      snout: { ...PRESETS.cow.snout, color: 0x7a5e4e, nostril: 0x1e120c },
       horns: { style: 'bull', color: 0xe8dcc0 }, tail: { ...PRESETS.cow.tail, tuft: 0x2a1a12 },
     };
   }
