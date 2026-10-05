@@ -1,182 +1,183 @@
-# El arca de Noé — cuento interactivo en three.js
+# Noah's Ark — interactive storybook in three.js
 
-**Fecha:** 2026-10-05
-**Estado:** borrador para revisión
+**Date:** 2026-10-05
+**Status:** draft for review
 
-## 1. Propósito
+## 1. Purpose
 
-Un cuento ilustrado de la historia de Noé en el que cada página muestra, en lugar de una imagen, una escena animada en three.js con la que el niño puede interactuar.
+An illustrated storybook of Noah's story where each page shows, instead of a picture, an animated three.js scene the child can interact with.
 
-- **Para quién:** familias cristianas en general (no denominacionales, Santos de los Últimos Días, Testigos de Jehová, etc.).
-- **Cómo se usa:** un adulto (o hermano mayor) lee el texto en voz alta y el niño toca la escena. No es para darle el celular al niño y olvidarse de él.
-- **Éxito:** la historia se cuenta completa y fiel a la Biblia, el niño participa en cada página y el adulto puede leerla cómodamente en un celular, tableta o computadora.
+- **Audience:** Christian families in general (non-denominational, Latter-day Saints, Jehovah's Witnesses, etc.).
+- **How it is used:** an adult (or older sibling) reads the text aloud while the child taps the scene. It is not meant to be handed to a child to keep them busy alone.
+- **Success:** the story is told completely and faithfully to the Bible, the child takes part on every page, and the adult can read it comfortably on a phone, tablet, or computer.
 
-Fuera de alcance (por ahora): narración en audio, selector de edad, modo "juego" separado, más idiomas que español e inglés.
+Out of scope (for now): audio narration, age selector, a separate "game" mode, languages other than Spanish and English.
 
-## 2. Reglas de contenido
+## 2. Content rules
 
-1. **Fidelidad al canon bíblico.** Se usan solo pasajes de la Biblia (no Escrituras de los últimos días), para que sea universal. Los textos son paráfrasis fieles, no citas literales de una traducción.
-2. **Referencias ocasionales.** Cada página puede mostrar una referencia en letra pequeña (p. ej. *Génesis 6:22*) donde aporte; no es obligatorio en todas.
-3. **Ilustración vs. texto.** Las animaciones pueden ilustrar cosas que el texto no afirma (p. ej. los hijos cortando madera, ladrones con antifaz), pero el texto nunca afirma algo que la Biblia no dice.
-4. **El niño actúa como Noé y su familia; lo que hace Dios ocurre solo, como animación.** El niño nunca provoca la luz de Dios, ni cierra la puerta, ni manda la lluvia, ni baja el agua, ni dibuja el arcoíris. Mientras corre una animación de Dios, los toques se ignoran.
-5. **Dios nunca aparece con figura.** Se representa como luz que baja del cielo y como el texto.
-6. **Nada aterrador.** La violencia es de caricatura (nubes de polvo, ladrones con antifaz). No se muestra a nadie ahogándose: durante el diluvio solo se ven el arca y el agua.
-7. **Las mujeres nunca llevan velo.** Cabello suelto, de la altura de los hombros a media espalda.
-8. **Animales carnívoros comen carne.** No se adopta la interpretación de que los animales eran herbívoros antes del diluvio.
-9. **La promesa del arcoíris** se expresa como Génesis 9:11: nunca más habrá un diluvio para destruir la tierra.
+1. **Faithful to the biblical canon.** Only Bible passages are used (no Latter-day scripture), so the story stays universal. Texts are faithful paraphrases, not literal quotes from any one translation.
+2. **Occasional references.** A page may show a small-print reference (e.g. *Genesis 6:22*) where it adds value; not required on every page.
+3. **Illustration vs. text.** Animations may illustrate things the text does not claim (e.g. the sons cutting wood, thieves wearing masks), but the text never claims anything the Bible does not say.
+4. **The child acts as Noah and his family; what God does happens on its own, as animation.** The child never triggers God's light, closes the door, sends the rain, lowers the water, or draws the rainbow. Taps are ignored while a God animation is playing.
+5. **God is never shown as a figure.** He is represented as light coming down from the sky and through the text.
+6. **Nothing frightening.** Violence is cartoon-style (dust clouds, masked thieves). No one is shown drowning: during the flood only the ark and the water are visible.
+7. **Women never wear a veil.** Hair is worn loose, from shoulder length to mid-back.
+8. **Carnivorous animals eat meat.** The interpretation that animals were herbivores before the flood is not adopted.
+9. **The rainbow promise** is phrased as in Genesis 9:11: there will never again be a flood to destroy the earth.
 
-## 3. Idiomas
+## 3. Languages
 
-- Español latinoamericano neutro ("tú", "ustedes"; sin "vos", sin "vosotros", sin regionalismos; ante la duda, forma de México) e inglés.
-- Sin idioma por defecto: la portada muestra los botones de texto "Español" y "English" (sin emojis). Tras elegir aparece "Comenzar" / "Start".
-- La elección se recuerda en el navegador (`localStorage`, envuelto en try/catch; si falla, simplemente no se recuerda).
-- Un botón pequeño en una esquina permite cambiar de idioma a mitad del cuento; solo se repinta el panel de texto, la escena no se reinicia.
-- Los textos viven en `lang/es.json` y `lang/en.json` con las mismas claves.
+- Neutral Latin American Spanish ("tú", "ustedes"; no "vos", no "vosotros", no regionalisms; when in doubt, Mexican usage) and English.
+- No default language: the cover shows text buttons "Español" and "English" (no emojis). After choosing, "Comenzar" / "Start" appears.
+- The choice is remembered in the browser (`localStorage`, wrapped in try/catch; if it fails, it is simply not remembered).
+- A small button in a corner lets the reader switch language mid-story; only the text panel is repainted, the scene is not restarted.
+- Texts live in `lang/es.json` and `lang/en.json` with identical keys.
 
-## 4. Escenas
+## 4. Scenes
 
-Cada escena tiene una interacción y/o animación. **"Siguiente" aparece solo cuando terminan la interacción y la animación de cierre.**
+Every scene has an interaction and/or animation. **"Next" appears only when both the interaction and the closing animation have finished.**
 
-| # | Escena | Referencias | Interacción del niño | Animación (sin toques) |
+| # | Scene | References | Child's interaction | Animation (no taps) |
 |---|---|---|---|---|
-| 0 | Portada | — | Elegir idioma, tocar "Comenzar" | El arca flota suave y apaciblemente sobre el agua |
-| 1 | El mundo lleno de violencia | Gén 6:5–13 | Tocar las casas de la ciudad: en cada una aparece algo (nube de pelea de caricatura, ladrón con antifaz entrando a robar). Noé está en su campo, a las afueras | Al descubrir todas, cae una luz cálida sobre Noé y Dios le habla ("Noé halló gracia", 6:8; la tierra llena de violencia, 6:13) |
-| 2 | Noé predica y lo rechazan | 2 Pe 2:5; Mt 24:38; 1 Pe 3:20 | En la plaza, Noé habla con los brazos abiertos. Tocar a cada persona: una se ríe, otra se burla, otra se tapa los oídos, otra se da la vuelta y se va | Al final Noé queda solo en la plaza |
-| 3 | Las instrucciones del arca | Gén 6:14–18 | Tocar puntos de luz; cada uno revela una parte del plano de luz: largo 300 codos (con un Noé pequeñito para escala), 3 pisos, ventana, puerta al costado, brea por dentro y por fuera | El arca completa se ilumina |
-| 4 | Cortar madera y construir | Gén 6:10, 6:22; Heb 11:7 | Tocar árbol → un hijo lo corta y se vuelve troncos; tocar troncos → tablas; tocar tablas → vuelan al arca. Se repite con varios árboles | El arca crece por etapas hasta quedar terminada |
-| 5 | Los animales en parejas | Gén 6:19–21; 7:8–9 | Tocar una comida y luego una pareja. Comida correcta → la pareja camina junta y sube por la rampa; incorrecta → el animal niega con la cabeza (sin castigo). Tres tandas de 4 parejas | Las parejas hacen fila en la rampa |
-| 6 | Entran los 8 y llueve | Gén 7:7, 7:12, 7:16–20; 1 Pe 3:20 | Tocar a cada una de las 8 personas para que suba al arca | Dios cierra la puerta (con luz); llueve hasta que el agua cubre toda la tierra y el arca flota |
-| 7 | El cuervo y la paloma | Gén 8:4–12 | El arca ya reposa sobre Ararat (cimas visibles). 4 toques en la ventana: el cuervo sale y va y viene; la paloma regresa sin nada; regresa con una hoja de olivo; no regresa | Cada vuelo |
-| 8 | Salen y el arcoíris | Gén 8:13–19; 9:11–16 | Tocar a las parejas de animales y a la familia para que salgan del arca | El agua baja sola (el viento, 8:1) y se abre la puerta; al final el arcoíris aparece solo en el cielo con la promesa. Fin |
+| 0 | Cover | — | Choose language, tap "Start" | The ark floats gently and peacefully on the water |
+| 1 | The world full of violence | Gen 6:5–13 | Tap the houses in the city; each reveals something (cartoon fight cloud, masked thief sneaking in to steal). Noah stands in his field, on the outskirts | Once all are revealed, warm light falls on Noah and God speaks to him ("Noah found grace", 6:8; the earth filled with violence, 6:13) |
+| 2 | Noah preaches and is rejected | 2 Pet 2:5; Matt 24:38; 1 Pet 3:20 | In the town square, Noah speaks with open arms. Tap each person: one laughs, one mocks, one covers their ears, one turns and walks away | Finally Noah is left alone in the square |
+| 3 | The ark's instructions | Gen 6:14–18 | Tap points of light; each reveals part of a blueprint drawn in light: 300 cubits long (with a tiny Noah for scale), 3 decks, window, door in the side, pitch inside and out | The complete ark lights up |
+| 4 | Cutting wood and building | Gen 6:10, 6:22; Heb 11:7 | Tap a tree → a son cuts it into logs; tap logs → planks; tap planks → they fly onto the ark. Repeat with several trees | The ark grows in stages until finished |
+| 5 | The animals in pairs | Gen 6:19–21; 7:8–9 | Tap a food, then a pair. Right food → the pair walks together up the ramp; wrong food → the animal shakes its head (no penalty). Three rounds of 4 pairs | Pairs queue on the ramp |
+| 6 | The eight go in and it rains | Gen 7:7, 7:12, 7:16–20; 1 Pet 3:20 | Tap each of the 8 people so they board the ark | God closes the door (with light); it rains until the water covers the whole earth and the ark floats |
+| 7 | The raven and the dove | Gen 8:4–12 | The ark already rests on Ararat (peaks visible). 4 taps on the window: the raven goes to and fro; the dove returns with nothing; returns with an olive leaf; does not return | Each flight |
+| 8 | Leaving the ark and the rainbow | Gen 8:13–19; 9:11–16 | Tap the animal pairs and the family so they leave the ark | The water recedes on its own (the wind, 8:1) and the door opens; at the end the rainbow appears in the sky on its own with the promise. The end |
 
-### Animales y comida (escena 5)
+### Animals and food (scene 5)
 
-12 parejas, 24 animales, 7 comidas:
+12 pairs, 24 animals, 7 foods:
 
-| Tanda | Pareja | Comida |
+| Round | Pair | Food |
 |---|---|---|
-| 1 | León y leona | Carne |
-| 1 | Vacas | Pasto |
-| 1 | Jirafas | Hojas de árbol |
-| 1 | Conejos | Zanahoria |
-| 2 | Cocodrilos | Carne |
-| 2 | Cabras | Pasto |
-| 2 | Elefantes | Hojas de árbol |
-| 2 | Perros | Hueso |
-| 3 | Gatos | Pescado |
-| 3 | Cebras | Pasto |
-| 3 | Palomas | Semillas |
-| 3 | Cuervos | Semillas |
+| 1 | Lion and lioness | Meat |
+| 1 | Cows | Grass |
+| 1 | Giraffes | Tree leaves |
+| 1 | Rabbits | Carrot |
+| 2 | Crocodiles | Meat |
+| 2 | Goats | Grass |
+| 2 | Elephants | Tree leaves |
+| 2 | Dogs | Bone |
+| 3 | Cats | Fish |
+| 3 | Zebras | Grass |
+| 3 | Doves | Seeds |
+| 3 | Ravens | Seeds |
 
-En cada tanda solo aparecen las comidas de sus 4 parejas. Al subir las 4, llega la siguiente tanda.
+Each round shows only the foods for its 4 pairs. When all 4 have boarded, the next round arrives.
 
-## 5. Personajes y estilo
+## 5. Characters and style
 
-**Estilo general:** caricatura simple y amable, hecha con figuras primitivas (cápsulas, esferas, cajas, conos), como en `coin-collector`.
+**Overall style:** simple, friendly cartoon built from primitives (capsules, spheres, boxes, cones), as in `coin-collector`.
 
-**Extremidades unidas.** En `coin-collector/player.js` los pivotes de los brazos quedan fuera del radio del torso y se ve un hueco. Aquí:
-- cada articulación (hombro, cadera, patas) nace dentro del volumen del cuerpo;
-- una esfera pequeña cubre cada unión para que no se vea hueco al animar;
-- en las personas, la túnica cubre las caderas.
+**Attached limbs.** In `coin-collector/player.js` the arm pivots sit outside the torso radius, leaving a visible gap. Here:
+- every joint (shoulder, hip, legs) starts inside the body volume;
+- a small sphere covers each joint so no gap shows while animating;
+- on people, the tunic covers the hips.
 
-**Caras:** ojos de punto, sin nariz. Boca solo cuando hace falta (p. ej. quien se ríe de Noé).
+**Faces:** dot eyes, no nose. A mouth only when needed (e.g. someone laughing at Noah).
 
-**Ropa:** túnica de un color, más ancha abajo, cinturón de otro tono, sandalias simples, mangas unidas al cuerpo. Las mujeres llevan túnica más larga. Ninguna lleva velo.
+**Clothing:** single-color tunic, wider at the bottom, belt in another shade, simple sandals, sleeves attached to the body. Women wear longer tunics. None wears a veil.
 
-| Personaje | Aspecto |
+| Character | Look |
 |---|---|
-| Noé | El mayor (600 años, Gén 7:6). Barba larga blanca, cabello blanco. Túnica beige/café claro. Bastón opcional |
-| Esposa de Noé | Cabello largo gris/blanco suelto. Túnica color vino |
-| Sem, Cam, Jafet | Uno joven sin barba, uno con barba corta, uno con barba más grande. Cabello castaño oscuro, negro y rojizo. Túnicas azul, verde y terracota |
-| Las tres nueras | Cabello largo suelto: negro, naranja y rubio. Cada una viste del color de su esposo |
-| Habitantes | Túnicas en tonos apagados, variaciones de pelo |
-| Ladrones | Habitantes con antifaz negro |
+| Noah | The eldest (600 years old, Gen 7:6). Long white beard, white hair. Beige/light brown tunic. Optional staff |
+| Noah's wife | Long loose gray/white hair. Wine-colored tunic |
+| Shem, Ham, Japheth | One young with no beard, one with a short beard, one with a fuller beard. Dark brown, black, and reddish hair. Blue, green, and terracotta tunics |
+| The three daughters-in-law | Long loose hair: black, orange, and blond. Each wears her husband's color |
+| Townspeople | Muted-tone tunics, hair variations |
+| Thieves | Townspeople with a black mask |
 
-**Animales:** bonitos, de caricatura, sin dientes amenazantes. El cocodrilo parte del modelo de `coin-collector/crocodile.js`, suavizado. Machos y hembras: el león con melena y la leona sin melena; en los demás, la hembra un poco más pequeña y, en algunos casos, un detalle propio. Patas unidas al cuerpo con la misma regla que las personas.
+**Animals:** cute, cartoon-style, no threatening teeth. The crocodile starts from `coin-collector/crocodile.js`, softened. Male and female: the lion has a mane, the lioness does not; for the others, the female is slightly smaller and, in some cases, has a distinguishing detail. Legs attached to the body under the same rule as people.
 
-**Solidez:** nadie atraviesa a nadie (ver §7).
+**Solidity:** nothing passes through anything else (see §7).
 
 ## 6. Layout
 
-La regla depende de la orientación de la pantalla, no del tipo de dispositivo. Mobile first.
+The rule depends on screen orientation, not device type. Mobile first.
 
-- **Vertical** (celular, tableta vertical): animación arriba (≈60%), texto abajo (≈40%).
-- **Horizontal** (tableta, laptop, escritorio, celular girado): texto a la izquierda (≈35%), animación a la derecha (≈65%).
+- **Portrait** (phone, portrait tablet): animation on top (≈60%), text below (≈40%).
+- **Landscape** (tablet, laptop, desktop, rotated phone): text on the left (≈35%), animation on the right (≈65%).
 
-Panel de texto: texto de la página en letra grande para leer en voz alta, referencia en letra pequeña, puntos de progreso y botón "Siguiente" abajo (al alcance del pulgar). Botón de idioma pequeño en una esquina de la animación. Se respetan las zonas seguras (`env(safe-area-inset-*)`). La meta es que cada texto quepa sin scroll; si no cabe, el panel hace scroll.
+Text panel: page text in a large font for reading aloud, reference in small print, progress dots, and the "Next" button at the bottom (within thumb reach). Small language button in a corner of the animation. Safe areas are respected (`env(safe-area-inset-*)`). The goal is for every page's text to fit without scrolling; if it doesn't, the panel scrolls.
 
-Girar la pantalla a mitad de una escena cambia el layout y reajusta la cámara sin reiniciar la escena.
+Rotating the screen mid-scene switches the layout and refits the camera without restarting the scene.
 
-## 7. Arquitectura
+## 7. Architecture
 
-Vanilla three.js, sin build: three.js se carga desde un CDN con import map, módulos ES, sin `package.json`. Se sirve con cualquier servidor estático (`python3 -m http.server`) y se puede publicar en GitHub Pages.
+Vanilla three.js, no build step: three.js loads from a CDN via import map, ES modules, no `package.json`. Served by any static server (`python3 -m http.server`) and publishable on GitHub Pages.
 
 ```
 noah-ark/
 ├── index.html            layout, CSS, import map
-├── main.js               renderer, cámara, ciclo de animación, entrada de toques
-├── story.js              orden de escenas, ciclo de vida, regla de "Siguiente"
-├── i18n.js               carga del idioma, t(clave), recordar elección
+├── main.js               renderer, camera, animation loop, tap input
+├── story.js              scene order, lifecycle, "Next" rule
+├── i18n.js               language loading, t(key), remembering the choice
 ├── lang/es.json, en.json
 ├── characters/
-│   ├── rig.js            extremidades unidas (articulaciones dentro del cuerpo)
-│   ├── people.js         Noé, familia, habitantes, ladrones
-│   └── animals.js        12 animales, macho y hembra
+│   ├── rig.js            attached limbs (joints inside the body)
+│   ├── people.js         Noah, family, townspeople, thieves
+│   └── animals.js        12 animals, male and female
 ├── world/
-│   ├── terrain.js        suelo, montañas, agua que sube y baja
-│   ├── sky.js            cielo, nubes, lluvia, arcoíris
-│   ├── ark.js            plano de luz, construcción por etapas, arca terminada
-│   └── props.js          árboles, troncos, tablas, casas, comida
+│   ├── terrain.js        ground, mountains, rising and falling water
+│   ├── sky.js            sky, clouds, rain, rainbow
+│   ├── ark.js            light blueprint, staged construction, finished ark
+│   └── props.js          trees, logs, planks, houses, food
 ├── systems/
-│   ├── solid.js          separación de círculos (lógica pura)
-│   └── tap.js            raycasting de toques, brillo de objetos tocables
+│   ├── solid.js          circle separation (pure logic)
+│   └── tap.js            tap raycasting, glow on tappable objects
 ├── scenes/0-cover.js … 8-rainbow.js
 └── tests/                node --test
 ```
 
-### Contrato de escena
+### Scene contract
 
-Cada módulo de `scenes/` exporta una función que recibe un contexto (`{ THREE, scene, camera, t }`) y devuelve:
+Each module in `scenes/` exports a function that receives a context (`{ THREE, scene, camera, t }`) and returns:
 
-- `build()` — arma la escena y define la zona que la cámara debe encuadrar;
-- `update(dt)` — anima cada cuadro;
-- `onTap(objeto)` — responde a un toque sobre un objeto marcado como tocable;
-- `isDone()` — verdadero cuando terminaron la interacción y la animación de cierre;
-- `dispose()` — libera geometrías y materiales.
+- `build()` — builds the scene and defines the area the camera must frame;
+- `update(dt)` — animates each frame;
+- `onTap(object)` — responds to a tap on an object marked as tappable;
+- `isDone()` — true once the interaction and the closing animation have finished;
+- `dispose()` — frees geometries and materials.
 
-La lógica de estado de cada escena (qué se ha tocado, en qué paso va) se separa en funciones puras dentro del mismo módulo para poder probarla sin three.js.
+Each scene's state logic (what has been tapped, which step it's on) is split into pure functions within the same module so it can be tested without three.js.
 
-### Flujo
+### Flow
 
-1. `story.js` llama a `build()`, pinta texto y referencia de la escena, oculta "Siguiente".
-2. Cada cuadro: `update(dt)`, luego `isDone()`. Si es verdadero, "Siguiente" aparece con brillo suave.
-3. "Siguiente" → `dispose()` → siguiente escena.
+1. `story.js` calls `build()`, paints the scene's text and reference, hides "Next".
+2. Every frame: `update(dt)`, then `isDone()`. When true, "Next" appears with a soft glow.
+3. "Next" → `dispose()` → next scene.
 
-### Sistemas
+### Systems
 
-- **Toques (`tap.js`):** los objetos tocables se marcan y brillan suavemente; si el niño no toca nada en un rato, el brillo se intensifica. Durante animaciones de Dios se ignoran los toques.
-- **Solidez (`solid.js`):** cada personaje y animal tiene un radio en el piso; cada cuadro se separan los que se enciman. Arca, casas y árboles son obstáculos fijos. En la rampa los animales hacen fila.
-- **Comida:** tocar comida la selecciona; tocar otra cambia la selección; tocar un animal con la comida correcta lo sube; con la incorrecta niega con la cabeza y la selección se mantiene.
-- **Cámara:** cada escena define una caja a encuadrar; la cámara se ajusta para que quepa completa en la proporción actual.
-- **Pestaña en segundo plano:** el reloj se pausa para que las animaciones no "salten" al volver.
-- **Texto faltante:** si falta una clave en un idioma se usa la del otro y se avisa en consola (las pruebas lo evitan).
+- **Taps (`tap.js`):** tappable objects are marked and glow softly; if the child taps nothing for a while, the glow intensifies. Taps are ignored during God animations.
+- **Solidity (`solid.js`):** every character and animal has a radius on the ground; each frame, overlapping ones are pushed apart. The ark, houses, and trees are fixed obstacles. Animals queue on the ramp.
+- **Food:** tapping a food selects it; tapping another changes the selection; tapping an animal with the right food sends it aboard; with the wrong food it shakes its head and the selection stays.
+- **Camera:** each scene defines a box to frame; the camera adjusts so it fits fully in the current aspect ratio.
+- **Background tab:** the clock pauses so animations don't "jump" when the tab returns.
+- **Missing text:** if a key is missing in one language, the other language's text is used and a console warning is logged (tests prevent this).
 
-## 8. Pruebas y verificación
+## 8. Testing and verification
 
-**Automáticas (`node --test`, sin dependencias):**
-- Solidez: dos cuerpos encimados terminan separados al menos la suma de sus radios; nadie entra en un obstáculo fijo.
-- Comida: cada animal acepta su comida y rechaza las demás; cada tanda incluye las comidas de sus 4 parejas.
-- Idiomas: `es.json` y `en.json` tienen las mismas claves y ningún texto vacío.
-- Avance: "Siguiente" no aparece antes de `isDone()`; el orden de escenas es el correcto.
-- Estado de escenas: árbol → troncos → tablas → arca; 4 vuelos en orden (cuervo, paloma ×3); las 8 personas suben y la escena termina; etc.
+**Automated (`node --test`, no dependencies):**
+- Solidity: two overlapping bodies end up at least the sum of their radii apart; nothing enters a fixed obstacle.
+- Food: each animal accepts its food and rejects the others; each round includes the foods for its 4 pairs.
+- Languages: `es.json` and `en.json` have identical keys and no empty strings.
+- Progression: "Next" never appears before `isDone()`; scene order is correct.
+- Scene state: tree → logs → planks → ark; 4 flights in order (raven, dove ×3); all 8 people board and the scene ends; etc.
 
-**Visuales (Claude, con el servidor MCP de Playwright):** cada escena en tamaño celular vertical, celular girado y escritorio. Se revisa: consola sin errores, extremidades unidas, nadie atraviesa a nadie, texto sin scroll, tocables brillan, "Siguiente" solo al final, ambos idiomas.
+**Visual (Claude, via the Playwright MCP server):** every scene at phone portrait, rotated phone, and desktop sizes. Checks: no console errors, limbs attached, nothing passes through anything, text fits without scrolling, tappables glow, "Next" appears only at the end, both languages.
 
-**Manuales (el usuario):** prueba en un celular real y juicio de gusto (que los personajes se vean bonitos, el ritmo, que el texto suene natural leído en voz alta).
+**Manual (the user):** testing on a real phone and matters of taste (characters look nice, pacing, text sounds natural read aloud).
 
-## 9. Repositorio
+## 9. Repository
 
-- `git init`; un commit por paso del plan.
-- `.gitignore` incluye `CLAUDE.md` y `.playwright-mcp/`.
-- `CLAUDE.md` resume las reglas de este documento (§2, §3, §5, §6 y la elección técnica) para futuras sesiones.
-- `.mcp.json` registra el servidor de Playwright del proyecto.
+- `git init`; one commit per plan step.
+- `.gitignore` includes `CLAUDE.md` and `.playwright-mcp/`.
+- `CLAUDE.md` (in English) summarizes the rules in this document (§2, §3, §5, §6, and the technical choice) for future sessions.
+- `.mcp.json` registers the project's Playwright server.
+- Spec, plan, and `CLAUDE.md` are written in English; commit messages in English.
