@@ -1,8 +1,25 @@
 import * as THREE from 'three';
 import { fitDistance } from './systems/framing.js';
+import { createStory } from './story.js';
+import {
+  SCENE_IDS, createTranslator, loadDictionaries, rememberLanguage, recallLanguage,
+} from './i18n.js';
+import factories from './scenes/index.js';
 
 const $ = (id) => document.getElementById(id);
 const stage = $('stage');
+const ui = {
+  text: $('page-text'),
+  ref: $('page-ref'),
+  progress: $('progress'),
+  next: $('next'),
+  langToggle: $('lang-toggle'),
+  cover: $('cover'),
+  coverTitle: $('cover-title'),
+  btnEs: $('btn-es'),
+  btnEn: $('btn-en'),
+  btnStart: $('btn-start'),
+};
 
 // ---------- Renderer, camera, world ----------
 const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -21,12 +38,6 @@ const sun = new THREE.DirectionalLight(0xffffff, 1.6);
 sun.position.set(8, 14, 6);
 sun.castShadow = true;
 world.add(sun);
-
-const cube = new THREE.Mesh(
-  new THREE.BoxGeometry(2, 2, 2),
-  new THREE.MeshStandardMaterial({ color: 0xc0643a })
-);
-world.add(cube);
 
 // ---------- Framing ----------
 // The active scene's framing box; the camera refits on every resize.
@@ -50,6 +61,99 @@ function resize() {
 new ResizeObserver(resize).observe(stage);
 resize();
 
+// ---------- Taps (temporary; replaced by systems/tap.js) ----------
+const raycaster = new THREE.Raycaster();
+const pointer = new THREE.Vector2();
+const tappables = new Set();
+const tap = {
+  mark(obj, id) { obj.userData.tapId = id; tappables.add(obj); },
+  unmark(obj) { delete obj.userData.tapId; tappables.delete(obj); },
+};
+renderer.domElement.addEventListener('pointerdown', (e) => {
+  const rect = renderer.domElement.getBoundingClientRect();
+  pointer.set(((e.clientX - rect.left) / rect.width) * 2 - 1, -((e.clientY - rect.top) / rect.height) * 2 + 1);
+  raycaster.setFromCamera(pointer, camera);
+  for (const hit of raycaster.intersectObjects([...tappables], true)) {
+    for (let o = hit.object; o; o = o.parent) {
+      if (o.userData.tapId) return story.tap(o.userData.tapId);
+    }
+  }
+});
+
+// ---------- Language ----------
+let dicts = null;
+let lang = null;
+let t = (key) => key;
+
+function setLanguage(next) {
+  lang = next;
+  t = createTranslator(dicts, lang);
+  rememberLanguage(lang);
+  document.documentElement.lang = lang;
+  ui.btnEs.classList.toggle('on', lang === 'es');
+  ui.btnEn.classList.toggle('on', lang === 'en');
+  ui.coverTitle.textContent = t('ui.title');
+  ui.btnStart.textContent = t('ui.start');
+  ui.btnStart.classList.remove('hidden');
+  ui.langToggle.textContent = t('ui.switchTo');
+  paintNextLabel();
+}
+
+// ---------- Page UI ----------
+const lastIndex = factories.length - 1;
+ui.progress.innerHTML = '<span></span>'.repeat(lastIndex);
+
+function paintNextLabel() {
+  ui.next.textContent = t(story.index === lastIndex ? 'ui.again' : 'ui.next');
+}
+
+const story = createStory({
+  factories,
+  makeCtx() {
+    const root = new THREE.Group();
+    world.add(root);
+    return {
+      root,
+      camera,
+      tap,
+      frame(box) { frameBox = box; refit(); },
+      release() { world.remove(root); },
+    };
+  },
+  ui: {
+    showPage(i) {
+      const onCover = i === 0;
+      document.body.classList.toggle('on-cover', onCover);
+      ui.cover.classList.toggle('hidden', !onCover);
+      ui.langToggle.classList.toggle('hidden', onCover);
+      if (!onCover) {
+        ui.text.textContent = t(`${SCENE_IDS[i]}.text`);
+        ui.ref.textContent = t(`${SCENE_IDS[i]}.ref`);
+      }
+      paintNextLabel();
+    },
+    setNext(visible) {
+      ui.next.classList.toggle('hidden', !visible);
+      ui.next.classList.toggle('glow', visible);
+    },
+    setProgress(i) {
+      [...ui.progress.children].forEach((dot, j) => dot.classList.toggle('on', j < i));
+    },
+  },
+});
+
+ui.btnEs.addEventListener('click', () => setLanguage('es'));
+ui.btnEn.addEventListener('click', () => setLanguage('en'));
+ui.btnStart.addEventListener('click', () => story.next());
+ui.next.addEventListener('click', () => {
+  if (story.index === lastIndex) story.restart();
+  else story.next();
+});
+ui.langToggle.addEventListener('click', () => {
+  setLanguage(lang === 'es' ? 'en' : 'es');
+  story.setLanguage();
+});
+
 // ---------- Loop ----------
 const clock = new THREE.Clock();
 document.addEventListener('visibilitychange', () => {
@@ -57,8 +161,14 @@ document.addEventListener('visibilitychange', () => {
   if (!document.hidden) clock.getDelta();
 });
 
-renderer.setAnimationLoop(() => {
-  const dt = clock.getDelta();
-  cube.rotation.y += dt;
-  renderer.render(world, camera);
-});
+async function boot() {
+  dicts = await loadDictionaries();
+  const remembered = recallLanguage();
+  if (remembered) setLanguage(remembered);
+  story.start(0);
+  renderer.setAnimationLoop(() => {
+    story.update(clock.getDelta());
+    renderer.render(world, camera);
+  });
+}
+boot();
