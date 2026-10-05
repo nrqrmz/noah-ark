@@ -101,6 +101,69 @@ export function createFightCloud() {
   };
 }
 
+const v3 = (x, y, z) => new THREE.Vector3(x, y, z);
+const UP = v3(0, 1, 0);
+
+// A capsule running from point a to point b.
+function stick(parent, a, b, r, material) {
+  const d = b.clone().sub(a);
+  const len = d.length();
+  const m = mesh(capsule(r, len), material, parent, (a.x + b.x) / 2, (a.y + b.y) / 2, (a.z + b.z) / 2);
+  m.quaternion.setFromUnitVectors(UP, d.normalize());
+  return m;
+}
+
+// Almond leaf profile: pointed at both ends, widest a bit below the middle.
+const leafGeometry = () => geo('almondLeaf', () => {
+  const pts = [];
+  for (let i = 0; i <= 10; i++) {
+    const t = i / 10;
+    pts.push(new THREE.Vector2(0.065 * Math.sin(Math.PI * t ** 0.8), t * 0.24));
+  }
+  return new THREE.LatheGeometry(pts, 10);
+});
+
+// A leaf on a short stem whose start sits at point p (inside the branch), pointing
+// deg degrees from straight up within the XY plane. size scales the whole unit.
+function attachLeaf(parent, p, deg, material, size = 1, twist = 0) {
+  const unit = new THREE.Group();
+  unit.position.copy(p);
+  unit.rotation.z = THREE.MathUtils.degToRad(deg);
+  unit.scale.setScalar(size);
+  parent.add(unit);
+  mesh(capsule(0.011, 0.05), material, unit, 0, 0.035);
+  const leaf = mesh(leafGeometry(), material, unit, 0, 0.06);
+  leaf.scale.z = 0.28; // flat blade facing the viewer
+  leaf.rotation.y = twist;
+  return unit;
+}
+
+// Carrot root: tapers from a rounded wide end to a point at y = 0.
+const CARROT_LEN = 0.56;
+const carrotRadius = (t) => 0.115 * t ** 0.75;
+const CARROT_PROFILE = (() => {
+  const pts = [new THREE.Vector2(0, 0)];
+  for (let i = 1; i <= 12; i++) pts.push(new THREE.Vector2(carrotRadius(i / 12), (i / 12) * CARROT_LEN * 0.94));
+  // Rounded shoulder closing the wide end.
+  for (let i = 1; i <= 4; i++) {
+    const a = (i / 4) * (Math.PI / 2);
+    pts.push(new THREE.Vector2(carrotRadius(1) * Math.cos(a), CARROT_LEN * 0.94 + CARROT_LEN * 0.06 * Math.sin(a)));
+  }
+  return pts;
+})();
+
+// Invisible, larger tap target for a food (radius in the food's local units).
+export function addTapProxy(food, radius = 0.55) {
+  const proxy = new THREE.Mesh(geo(`tapProxy${radius}`, () => new THREE.SphereGeometry(radius, 12, 8)), TAP_PROXY_MAT);
+  proxy.position.y = 0.3;
+  proxy.castShadow = false; // the shadow pass ignores colorWrite
+  proxy.receiveShadow = false;
+  food.add(proxy);
+  return proxy;
+}
+const TAP_PROXY_MAT = new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false });
+TAP_PROXY_MAT.userData.shared = true;
+
 // Food items for scene 5, about half a unit across.
 export function createFood(foodId) {
   const g = new THREE.Group();
@@ -114,29 +177,67 @@ export function createFood(foodId) {
       break;
     }
     case 'grass': {
-      for (let i = 0; i < 9; i++) {
-        const blade = mesh(geo('blade', () => new THREE.ConeGeometry(0.05, 0.6, 4)), mat(0x6cb33f), g, (i % 3 - 1) * 0.07, 0.3, (Math.floor(i / 3) - 1) * 0.07);
-        blade.rotation.z = (i % 3 - 1) * 0.25;
-        blade.rotation.x = (Math.floor(i / 3) - 1) * 0.25;
+      // A tuft: thin flat blades fanning out of a small clump, in two greens.
+      mesh(sphere(0.1, 12, 8), mat(0x3f7f2a), g, 0, 0.02).scale.set(1, 0.45, 1);
+      const blade = geo('grassBlade', () => new THREE.ConeGeometry(0.05, 1, 4).translate(0, 0.5, 0));
+      for (let i = 0; i < 14; i++) {
+        const a = i * 2.4; // golden-angle spread around the clump
+        const ring = i % 2 ? 0.065 : 0.035;
+        const b = mesh(blade, mat(i % 3 ? 0x6cb33f : 0x4f9a32), g, Math.cos(a) * ring, 0.02, Math.sin(a) * ring);
+        b.rotation.order = 'YXZ';
+        b.rotation.y = -a;
+        b.rotation.z = -(0.18 + (i % 4) * 0.15); // lean outward, away from the center
+        b.scale.set(0.3, 0.4 + ((i * 7) % 5) * 0.06, 1); // flat across, thin, varied heights
       }
-      const tie = mesh(geo('tie', () => new THREE.TorusGeometry(0.12, 0.03, 6, 16)), mat(0xc9a66b), g, 0, 0.22);
-      tie.rotation.x = Math.PI / 2;
       break;
     }
     case 'leaves': {
-      mesh(capsule(0.03, 0.5), mat(BARK), g, 0, 0.3).rotation.z = 0.4;
-      for (const [x, y] of [[-0.12, 0.42], [0.1, 0.32], [-0.02, 0.58], [0.18, 0.5], [-0.18, 0.22]]) {
-        const leaf = mesh(sphere(0.11, 10, 8), mat(0x3f9a3a), g, x, y, 0);
-        leaf.scale.set(1, 0.45, 0.7);
-      }
+      // A branch with two side twigs; every leaf hangs from it by a short stem.
+      const bark = mat(BARK);
+      const leaf = mat(0x3f9a3a);
+      const v = (x, y) => new THREE.Vector3(x, y, 0);
+      const base = v(0.08, 0);
+      const tip = v(-0.1, 0.72);
+      stick(g, base, tip, 0.035, bark);
+      const along = (t) => base.clone().lerp(tip, t);
+      const twigL = [along(0.4), v(-0.3, 0.5)];
+      const twigR = [along(0.62), v(0.22, 0.66)];
+      stick(g, ...twigL, 0.022, bark);
+      stick(g, ...twigR, 0.022, bark);
+      // [point the stem starts from, leaf direction in degrees from straight up]
+      const leaves = [
+        [tip, 5], [along(0.85), -60], [along(0.72), 55], [along(0.28), 60], [along(0.5), -70],
+        [twigL[1], 70], [twigL[0].clone().lerp(twigL[1], 0.55), 15],
+        [twigR[1], -40], [twigR[0].clone().lerp(twigR[1], 0.5), 30],
+      ];
+      leaves.forEach(([p, deg], i) => attachLeaf(g, p, deg, leaf, 1, (i % 3 - 1) * 0.5));
       break;
     }
     case 'carrot': {
-      const body = mesh(geo('carrot', () => new THREE.ConeGeometry(0.1, 0.5, 10)), mat(0xf07a24), g, 0, 0.12, 0);
-      body.rotation.z = Math.PI / 2 + 0.2;
-      for (const a of [-0.4, 0, 0.4]) {
-        const top = mesh(geo('carrotTop', () => new THREE.ConeGeometry(0.03, 0.22, 4)), mat(0x4fa83a), g, -0.3, 0.2, 0);
-        top.rotation.z = Math.PI / 2 + 0.6 + a;
+      // Root lying on the ground, tip to -x; the leafy top grows from the wide end.
+      const c = new THREE.Group();
+      c.position.set(-0.15, 0.13, 0); // root plus top centered on the origin
+      c.rotation.z = -Math.PI / 2 + 0.12;
+      g.add(c);
+      const orange = mat(0xf07a24);
+      mesh(geo('carrotRoot', () => new THREE.LatheGeometry(CARROT_PROFILE, 16)), orange, c, 0, -CARROT_LEN / 2);
+      // Ring grooves: thin darker bands hugging the root.
+      for (const t of [0.3, 0.5, 0.68, 0.84]) {
+        const ring = mesh(geo(`carrotRing${t}`, () => new THREE.TorusGeometry(carrotRadius(t), 0.007, 6, 20)), mat(0xc85a14), c, 0, -CARROT_LEN / 2 + t * CARROT_LEN);
+        ring.rotation.x = Math.PI / 2;
+      }
+      // Feathery stalks rising from the center of the wide end.
+      const green = mat(0x4fa83a);
+      const top = v3(0, CARROT_LEN / 2 - 0.01, 0);
+      for (const [deg, yaw] of [[-12, 0.3], [6, -0.4], [24, 0.5], [42, -0.2]]) {
+        const r = THREE.MathUtils.degToRad(deg);
+        const end = top.clone().add(v3(-Math.sin(r) * 0.3, Math.cos(r) * 0.3, Math.sin(yaw) * 0.08));
+        stick(c, top, end, 0.012, green);
+        for (const t of [0.4, 0.65, 0.88]) {
+          const p = top.clone().lerp(end, t);
+          for (const side of [-1, 1]) attachLeaf(c, p, deg + side * 40, green, 0.38, 0);
+        }
+        attachLeaf(c, end, deg, green, 0.42, 0);
       }
       break;
     }

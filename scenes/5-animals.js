@@ -5,7 +5,7 @@ import { animalsInRound, foodsForRound } from '../characters/animals/data.js';
 import { createAnimal, updateAnimal } from '../characters/animals/index.js';
 import { createPerson, familyLook, updatePerson, facePoint } from '../characters/people.js';
 import { createArk } from '../world/ark.js';
-import { createFood } from '../world/props.js';
+import { createFood, addTapProxy } from '../world/props.js';
 
 const ARK_POS = new THREE.Vector3(0, 0, -5.5);
 const PAIR_X = [-5.4, -1.8, 1.8, 5.4];
@@ -36,6 +36,7 @@ export default function createScene(ctx) {
       const obj = createFood(food);
       obj.scale.setScalar(1.7);
       obj.position.set((i - (all.length - 1) / 2) * 2.2, 0, FOOD_Z);
+      addTapProxy(obj); // a much larger invisible target, so taps near the food count
       ctx.root.add(obj);
       ctx.tap.mark(obj, `food-${food}`);
       return { id: food, obj };
