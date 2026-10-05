@@ -61,14 +61,16 @@ function addMane(head, neck, r, neckR, neckLen, hex) {
         new THREE.Vector3(x, y - 0.35, -ring.back));
     }
   }
-  // Ruff over the neck and shoulders, in body space so it drapes with gravity:
-  // a filled cape from the back of the head to the withers, tufts sweeping back
-  // along it and a few hanging down over the chest.
+  // Ruff over the top of the neck and the shoulders, in body space so it drapes
+  // with gravity: a filled cape from the back of the head toward the withers,
+  // tufts sweeping back along it and a few hanging under the chin. The cape sits
+  // high and behind the neck's axis, so the throat and lower neck stay visible.
   const body = neck.parent;
   const base = neck.position;
   const headPos = new THREE.Vector3(0, neckLen + neckR * 0.6, 0).applyEuler(neck.rotation).add(base);
-  const cape = mesh(sphere(r * 1.15, 16, 12), outer, body, 0, (base.y + headPos.y) / 2, base.z - r * 0.05);
-  cape.scale.set(0.95, 1, 1.3);
+  const capeAt = base.clone().lerp(headPos, 0.7);
+  const cape = mesh(sphere(r * 1.05, 16, 12), outer, body, 0, capeAt.y, capeAt.z - r * 0.35);
+  cape.scale.set(0.95, 0.95, 1.25);
   for (let i = 0; i < 4; i++) {
     const t = i / 3;
     tuft(body, i % 2 ? inner : outer, r * 0.36, r * (0.65 - t * 0.15),
@@ -81,8 +83,8 @@ function addMane(head, neck, r, neckR, neckLen, hex) {
     }
   }
   for (const x of [-0.4, 0, 0.4]) {
-    tuft(body, inner, r * 0.4, r * 0.7,
-      new THREE.Vector3(x * r, headPos.y - r * 0.95, headPos.z - r * 0.15),
+    tuft(body, inner, r * 0.4, r * 0.6,
+      new THREE.Vector3(x * r, headPos.y - r * 0.8, headPos.z - r * 0.15),
       new THREE.Vector3(x * 0.6, -1, 0.25));
   }
 }
