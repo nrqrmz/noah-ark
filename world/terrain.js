@@ -30,7 +30,7 @@ export function createArarat() {
   const group = new THREE.Group();
   const rock = new THREE.MeshStandardMaterial({ color: 0x8a7a66, roughness: 1, flatShading: true });
   const snow = new THREE.MeshStandardMaterial({ color: 0xf4f4f4, roughness: 0.9, flatShading: true });
-  const peaks = [[0, 0, 12, 7], [-14, -4, 9, 5], [13, -5, 10, 5.5]];
+  const peaks = [[0, 0, 12, 7], [-10.5, -7, 7, 5.6], [10, -8, 8, 6.2]];
   for (const [x, z, r, h] of peaks) {
     const peak = new THREE.Mesh(new THREE.ConeGeometry(r, h, 9, 1), rock);
     peak.position.set(x, h / 2, z);
