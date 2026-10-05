@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { mat, geo, sphere, capsule, mesh, addLimb } from '../rig.js';
+import { coatMaterial, coatCapsule, capsuleRepeat } from './coat.js';
 
 const EYE = 0x231a14;
 const WHITE = 0xffffff;
@@ -22,16 +23,25 @@ export function addEyes(head, r, { forward = 0.75, up = 0.25, side = 0.42, size 
 // Builds a four-legged animal facing +Z from a parameter set (see index.js presets).
 export function buildQuadruped(o) {
   const coat = mat(o.color);
+  // Painted markings for the parts listed in `o.coat.parts` ({ body, neck, legs, head } counts).
+  const painted = (part, base, repeat) => {
+    const count = o.coat?.parts?.[part];
+    if (!count) return null;
+    const seed = (o.coat.seed ?? 1) + ['body', 'neck', 'legs', 'head'].indexOf(part);
+    return coatMaterial({ base, mark: o.coat.mark, kind: o.coat.kind, seed, count, repeat });
+  };
   const root = new THREE.Group();
   const body = new THREE.Group();
   root.add(body);
 
-  // Body: a capsule lying along Z inside a scaled shell (stripes/spots live in the shell).
+  // Body: a capsule lying along Z inside a scaled shell. Its texture seam (u = 0) faces down.
   const shell = new THREE.Group();
   shell.position.y = o.bodyY;
   shell.scale.set(o.bodyScale?.[0] ?? 1, o.bodyScale?.[1] ?? 1, 1);
   body.add(shell);
-  const torso = mesh(capsule(o.bodyR, o.bodyLen), coat, shell);
+  const girth = ((o.bodyScale?.[0] ?? 1) + (o.bodyScale?.[1] ?? 1)) / 2;
+  const bodyCoat = painted('body', o.color, capsuleRepeat(o.bodyR, o.bodyLen, girth));
+  const torso = mesh(bodyCoat ? coatCapsule(o.bodyR, o.bodyLen) : capsule(o.bodyR, o.bodyLen), bodyCoat ?? coat, shell);
   torso.rotation.x = Math.PI / 2;
   const halfLen = o.bodyLen / 2 + o.bodyR;
 
@@ -39,35 +49,21 @@ export function buildQuadruped(o) {
     const belly = mesh(sphere(o.bodyR * 0.9), mat(o.belly), shell, 0, -o.bodyR * 0.25, 0);
     belly.scale.set(0.85, 0.75, (halfLen / o.bodyR) * 0.8);
   }
-  if (o.stripes) {
-    const stripe = mat(o.stripes);
-    const ring = geo(`stripe${o.bodyR}`, () => new THREE.TorusGeometry(o.bodyR * 0.97, o.bodyR * 0.06, 6, 28));
-    const n = 7;
-    // Only along the straight part of the capsule, where the rings sit flush.
-    const span = o.bodyLen * 0.9;
-    for (let i = 0; i < n; i++) mesh(ring, stripe, shell, 0, 0, -span / 2 + (i / (n - 1)) * span);
-  }
-  if (o.spots) {
-    const spot = mat(o.spots);
-    const pattern = o.spotPattern ?? [[0.6, 0.3], [-0.3, 0.5], [0.2, -0.4], [-0.7, -0.2], [1.2, 0.1], [-1.1, 0.6]];
-    for (const [zf, a] of pattern) {
-      const angle = a * Math.PI;
-      // Mostly embedded in the body so only a flat-looking patch shows.
-      mesh(sphere(o.bodyR * 0.34, 10, 8), spot, shell,
-        Math.sin(angle) * o.bodyR * 0.8, Math.cos(angle) * o.bodyR * 0.8, zf * o.bodyLen * 0.45);
-    }
-  }
 
   // Legs: pivots inside the body volume, hooves/paws at the end.
   const legMat = mat(o.legColor ?? o.color);
+  const legCoat = painted('legs', o.legColor ?? o.color, capsuleRepeat(o.legR, o.legLen));
   const legX = (o.bodyR * (o.bodyScale?.[0] ?? 1)) - o.legR * 1.2;
   const legY = o.bodyY - o.bodyR * 0.45;
   const legs = [];
-  for (const [x, z] of [[-1, 1], [1, 1], [-1, -1], [1, -1]]) {
+  for (const [i, [x, z]] of [[-1, 1], [1, 1], [-1, -1], [1, -1]].entries()) {
     const pivot = addLimb(body, {
       x: x * legX, y: legY, z: z * o.bodyLen * 0.42,
-      radius: o.legR, length: o.legLen, material: legMat, jointRadius: o.legR * 1.25,
+      radius: o.legR, length: o.legLen, material: legCoat ?? legMat, jointRadius: o.legR * 1.25,
+      jointMaterial: legMat, geometry: legCoat ? coatCapsule(o.legR, o.legLen) : undefined,
     });
+    // The four legs share one texture; turning each one makes their markings differ.
+    if (legCoat) pivot.children[1].rotation.y = i * 1.9;
     if (o.hoof) mesh(geo(`hoof${o.legR}`, () => new THREE.CylinderGeometry(o.legR * 1.05, o.legR * 1.15, o.legR * 0.9, 10)), mat(o.hoof), pivot, 0, -(o.legLen + o.legR * 1.55), 0);
     legs.push(pivot);
   }
@@ -78,12 +74,14 @@ export function buildQuadruped(o) {
   neck.rotation.x = o.neckAngle ?? 0.6; // lean forward
   body.add(neck);
   const neckLen = o.neckLen ?? 0.2;
-  mesh(capsule(o.neckR ?? o.bodyR * 0.55, neckLen), coat, neck, 0, neckLen / 2, 0);
+  const neckR = o.neckR ?? o.bodyR * 0.55;
+  const neckCoat = painted('neck', o.color, capsuleRepeat(neckR, neckLen));
+  mesh(neckCoat ? coatCapsule(neckR, neckLen) : capsule(neckR, neckLen), neckCoat ?? coat, neck, 0, neckLen / 2, 0);
   const head = new THREE.Group();
-  head.position.set(0, neckLen + (o.neckR ?? o.bodyR * 0.55) * 0.6, 0);
+  head.position.set(0, neckLen + neckR * 0.6, 0);
   head.rotation.x = -(o.neckAngle ?? 0.6); // keep the face level
   neck.add(head);
-  const headMesh = mesh(sphere(o.headR, 20, 14), mat(o.headColor ?? o.color), head);
+  const headMesh = mesh(sphere(o.headR, 20, 14), painted('head', o.headColor ?? o.color) ?? mat(o.headColor ?? o.color), head);
   if (o.headScale) headMesh.scale.set(...o.headScale);
   if (o.snout) {
     const snout = mesh(sphere(o.headR * o.snout.r, 14, 10), mat(o.snout.color ?? o.color), head, 0, -o.headR * 0.2, o.headR * o.snout.z);
@@ -139,7 +137,7 @@ export function buildQuadruped(o) {
   }
   if (o.crest) {
     // Short upright mane along the neck (zebra).
-    const crest = mesh(geo(`crest${neckLen}`, () => new THREE.BoxGeometry(0.06, neckLen + 0.3, 0.14)), mat(o.crest), neck, 0, neckLen / 2 + 0.05, -(o.neckR ?? o.bodyR * 0.55) * 0.75);
+    const crest = mesh(geo(`crest${neckLen}`, () => new THREE.BoxGeometry(0.06, neckLen + 0.3, 0.14)), mat(o.crest), neck, 0, neckLen / 2 + 0.05, -neckR * 0.75);
     crest.castShadow = true;
   }
   if (o.horns) {

@@ -14,14 +14,15 @@ const PRESETS = {
   cow: {
     color: 0xf3efe8, bodyR: 0.42, bodyLen: 0.85, bodyY: 0.9, legR: 0.12, legLen: 0.36,
     headR: 0.3, snout: { r: 0.55, z: 0.7, color: 0xf2b8b0, nose: 0x8a5a55 }, ears: 'side',
-    neckLen: 0.12, neckAngle: 1.0, spots: 0x3b3230, hoof: 0x4a3a30, horns: 0xf2e6c8, hornSpread: 1.0,
+    neckLen: 0.12, neckAngle: 1.0, hoof: 0x4a3a30, horns: 0xf2e6c8, hornSpread: 1.0,
     tail: { len: 0.6, r: 0.035, angle: -2.9, tuft: 0x3b3230 },
+    coat: { kind: 'spots', mark: 0x3b3230, parts: { body: 7 } },
   },
   giraffe: {
     color: 0xeec46b, bodyR: 0.36, bodyLen: 0.6, bodyY: 1.55, legR: 0.09, legLen: 1.0,
     headR: 0.25, headScale: [0.9, 0.9, 1.25], snout: { r: 0.5, z: 0.7, color: 0xe8b65a, nose: 0x6b4a2b }, ears: 'side',
-    neckLen: 1.3, neckR: 0.13, neckAngle: 0.35, spots: 0xa86a32, ossicones: 0x6b4a2b, hoof: 0x5a4030,
-    spotPattern: [[0.6, 0.3], [-0.3, 0.5], [0.2, -0.4], [-0.7, -0.2], [0.9, -0.5], [-1.0, 0.6], [0, 0.05], [0.4, -0.75]],
+    neckLen: 1.3, neckR: 0.13, neckAngle: 0.35, ossicones: 0x6b4a2b, hoof: 0x5a4030,
+    coat: { kind: 'patches', mark: 0xa86a32, parts: { body: 36, neck: 18, legs: 14 } },
     tail: { len: 0.5, r: 0.03, angle: -2.8, tuft: 0x5a4030 }, crest: 0xa86a32,
   },
   rabbit: {
@@ -49,23 +50,32 @@ const PRESETS = {
     tail: { len: 0.3, r: 0.04, angle: -0.6 }, gait: 10,
   },
   cat: {
-    color: 0x9a9a9a, bodyR: 0.14, bodyLen: 0.24, bodyY: 0.3, legR: 0.045, legLen: 0.12,
-    headR: 0.15, snout: { r: 0.35, z: 0.78, color: 0xd8d8d8, nose: 0xe39aa6 }, ears: 'pointy',
-    neckLen: 0.04, neckAngle: 0.6, stripes: 0x6e6e6e,
+    color: 0xe8862a, bodyR: 0.14, bodyLen: 0.24, bodyY: 0.3, legR: 0.045, legLen: 0.12,
+    headR: 0.15, snout: { r: 0.35, z: 0.78, color: 0xf6dcb4, nose: 0xe39aa6 }, ears: 'pointy',
+    neckLen: 0.04, neckAngle: 0.6, coat: { kind: 'stripes', mark: 0xb85c14, parts: { body: 7, legs: 4 } },
     tail: { len: 0.36, r: 0.03, angle: -0.35 }, gait: 10,
   },
   zebra: {
     color: 0xf7f7f2, bodyR: 0.37, bodyLen: 0.75, bodyY: 0.95, legR: 0.09, legLen: 0.45,
     headR: 0.24, headScale: [0.9, 0.95, 1.35], snout: { r: 0.5, z: 0.8, color: 0x2a2a2a }, ears: 'pointy',
-    neckLen: 0.35, neckR: 0.15, neckAngle: 0.6, stripes: 0x1f1f1f, hoof: 0x2a2a2a, crest: 0x1f1f1f,
+    neckLen: 0.35, neckR: 0.15, neckAngle: 0.6, hoof: 0x2a2a2a, crest: 0x1f1f1f,
     tail: { len: 0.55, r: 0.035, angle: -2.8, tuft: 0x1f1f1f },
+    // Temporary painted stripes on the body; Task 6 rebuilds the zebra.
+    coat: { kind: 'stripes', mark: 0x1f1f1f, parts: { body: 11 } },
   },
 };
 
 // Female variations: slightly smaller, and a few species get their own detail.
 function femaleOverrides(id) {
   if (id === 'lion') return { mane: null, ears: 'round' };
-  if (id === 'cow') return { spotPattern: [[0.4, -0.3], [-0.5, 0.35], [1.0, 0.6], [-0.9, -0.55], [0.1, 0.8]] };
+  if (id === 'cow') return { coat: { ...PRESETS.cow.coat, seed: 5 } }; // her own spot layout
+  if (id === 'cat') {
+    // Gray tabby; the male is the orange one.
+    return {
+      color: 0x9a9a9a, snout: { ...PRESETS.cat.snout, color: 0xd8d8d8 },
+      coat: { ...PRESETS.cat.coat, mark: 0x6e6e6e },
+    };
+  }
   if (id === 'goat') return { goatee: null };
   return {};
 }
