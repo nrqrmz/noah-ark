@@ -26,8 +26,18 @@ function addMane(head, neck, r, neckR, neckLen, hex) {
   const inner = mat(hex);
   const outer = mat(new THREE.Color(hex).multiplyScalar(0.75).getHex());
   const up = new THREE.Vector3(0, 1, 0);
+  // A soft tuft: a lathe teardrop with a rounded tip instead of a sharp cone point.
+  const tuftGeo = (size, len) => geo(`maneTuft${size.toFixed(4)}:${len.toFixed(4)}`, () => {
+    // Profile from the closed base up to the tip (this order makes the faces point outward).
+    const pts = [new THREE.Vector2(1e-4, -len / 2)];
+    for (let i = 0; i <= 8; i++) {
+      const t = i / 8;
+      pts.push(new THREE.Vector2(Math.max(1e-4, size * Math.pow(1 - Math.pow(t, 2.2), 0.55)), -len / 2 + t * len));
+    }
+    return new THREE.LatheGeometry(pts, 12);
+  });
   const tuft = (parent, material, size, len, pos, dir) => {
-    const cone = mesh(geo(`maneTuft${size.toFixed(4)}:${len.toFixed(4)}`, () => new THREE.ConeGeometry(size, len, 12)), material, parent);
+    const cone = mesh(tuftGeo(size, len), material, parent);
     dir.normalize();
     cone.quaternion.setFromUnitVectors(up, dir);
     cone.position.copy(pos).addScaledVector(dir, len * 0.3);
@@ -99,14 +109,18 @@ export function buildQuadruped(o) {
   const girth = ((o.bodyScale?.[0] ?? 1) + (o.bodyScale?.[1] ?? 1)) / 2;
   const bodyCoat = painted('body', o.color, capsuleRepeat(o.bodyR, o.bodyLen, girth));
   // `waist` slims the middle: a thinner torso between a full chest and hips (big cats).
+  // A waisted body also ends just past the legs (small rump and chest, no overhang).
+  const legZ = o.bodyLen * 0.42;
   const torsoR = o.bodyR * (o.waist ?? 1);
-  const torso = mesh(bodyCoat ? coatCapsule(torsoR, o.bodyLen) : capsule(torsoR, o.bodyLen), bodyCoat ?? coat, shell);
-  torso.position.y = (o.bodyR - torsoR) * 0.6; // tuck the belly up, keep the back line
+  const torsoLen = o.waist ? Math.max(0.1, 2 * (legZ + o.bodyR * 0.55 - torsoR)) : o.bodyLen;
+  const torso = mesh(bodyCoat ? coatCapsule(torsoR, torsoLen) : capsule(torsoR, torsoLen), bodyCoat ?? coat, shell);
+  torso.position.y = o.waist ? o.bodyR * 0.1 : 0; // tuck the belly up, keep the back line
   torso.rotation.x = Math.PI / 2;
-  const halfLen = o.bodyLen / 2 + torsoR;
+  const halfLen = torsoLen / 2 + torsoR;
   if (o.waist) {
-    mesh(sphere(o.bodyR, 24, 18), coat, shell, 0, 0, o.bodyLen * 0.38).scale.set(1, 1, 1.35); // chest
-    mesh(sphere(o.bodyR * 0.92, 24, 18), coat, shell, 0, o.bodyR * 0.06, -o.bodyLen * 0.4).scale.set(1, 1, 1.3); // hips
+    // Deep chest hanging low over the front legs; smaller, higher hips over the hind legs.
+    mesh(sphere(o.bodyR, 24, 18), coat, shell, 0, -o.bodyR * 0.12, legZ - o.bodyR * 0.18).scale.set(1, 1.18, 0.85); // chest
+    mesh(sphere(o.bodyR * 0.88, 24, 18), coat, shell, 0, o.bodyR * 0.07, -legZ + o.bodyR * 0.15).scale.set(1, 1, 0.85); // hips
   }
 
   if (o.belly) {
@@ -119,12 +133,17 @@ export function buildQuadruped(o) {
   const legCoat = painted('legs', o.legColor ?? o.color, capsuleRepeat(o.legR, o.legLen));
   const legX = (o.bodyR * (o.bodyScale?.[0] ?? 1)) - o.legR * 1.2;
   const legY = o.bodyY - o.bodyR * 0.45;
+  // `legTaper` (bottom/top radius) gives thick upper legs slimming toward the paw;
+  // its ends hide inside the joint sphere and the paw.
+  const legShape = o.legTaper && !legCoat
+    ? geo(`taperLeg${o.legR}:${o.legLen}:${o.legTaper}`, () => new THREE.CylinderGeometry(o.legR * 1.15, o.legR * o.legTaper, o.legLen + o.legR * 2, 14))
+    : undefined;
   const legs = [];
   for (const [i, [x, z]] of [[-1, 1], [1, 1], [-1, -1], [1, -1]].entries()) {
     const pivot = addLimb(body, {
-      x: x * legX, y: legY, z: z * o.bodyLen * 0.42,
+      x: x * legX, y: legY, z: z * legZ,
       radius: o.legR, length: o.legLen, material: legCoat ?? legMat, jointRadius: o.legR * 1.25,
-      jointMaterial: legMat, geometry: legCoat ? coatCapsule(o.legR, o.legLen) : undefined,
+      jointMaterial: legMat, geometry: legCoat ? coatCapsule(o.legR, o.legLen) : legShape,
     });
     // The four legs share one texture; turning each one makes their markings differ.
     if (legCoat) pivot.children[1].rotation.y = i * 1.9;
@@ -148,6 +167,7 @@ export function buildQuadruped(o) {
   neck.add(head);
   const headMesh = mesh(sphere(o.headR, 20, 14), painted('head', o.headColor ?? o.color) ?? mat(o.headColor ?? o.color), head);
   if (o.headScale) headMesh.scale.set(...o.headScale);
+  if (o.headTilt) headMesh.rotation.x = o.headTilt; // nose-down: a sloping brow into the muzzle
   if (o.snout?.pads) {
     // Feline muzzle: a nose bridge, two puffy whisker pads, a small chin and a
     // wide triangular nose on top. `r` sets the pad size, `long` how far it reaches.
@@ -156,9 +176,12 @@ export function buildQuadruped(o) {
     const long = sn.long ?? 1;
     const padMat = mat(sn.color ?? o.color);
     const front = r * sn.z;
-    const bridge = mesh(capsule(r * 0.2, r * 0.4), mat(o.headColor ?? o.color), head, 0, r * 0.12, front - r * 0.12);
+    // The bridge ends just behind the nose; a longer muzzle gets a longer bridge.
+    const reach = r * (0.2 * long + 0.26); // half length plus cap radius
+    const bridge = mesh(capsule(r * 0.26, r * 0.4 * long), mat(o.headColor ?? o.color), head,
+      0, r * 0.002 + reach * Math.sin(0.3), front + r * 0.26 - reach * Math.cos(0.3));
     bridge.rotation.x = Math.PI / 2 + 0.3;
-    bridge.scale.set(1.15, 1, 0.9);
+    bridge.scale.set(1.1, 1, 0.85); // broad at the brow, so the head tapers into the muzzle
     const padR = r * sn.r * 0.6;
     for (const s of [-1, 1]) {
       mesh(sphere(padR, 14, 10), padMat, head, s * padR * 0.72, -r * 0.2, front + r * 0.12 * long).scale.set(1, 0.85, 0.9 * long);
@@ -181,11 +204,12 @@ export function buildQuadruped(o) {
   if (o.ears === 'round') {
     for (const s of [-1, 1]) mesh(sphere(o.headR * 0.3, 10, 8), earMat, head, s * o.headR * 0.62, o.headR * 0.72, -o.headR * 0.1).scale.set(1, 1, 0.5);
   } else if (o.ears === 'feline') {
-    // Small rounded ears set wide on the head (big cats).
+    // Small rounded ears on the top corners of the head (big cats).
     for (const s of [-1, 1]) {
-      const ear = mesh(sphere(o.headR * 0.24, 10, 8), earMat, head, s * o.headR * 0.68, o.headR * 0.66, -o.headR * 0.12);
-      ear.scale.set(1, 0.95, 0.42);
-      ear.rotation.z = -s * 0.5;
+      const hs = o.headScale ?? [1, 1, 1];
+      const ear = mesh(sphere(o.headR * 0.19, 10, 8), earMat, head, s * o.headR * 0.68 * hs[0], o.headR * 0.68 * hs[1], -o.headR * 0.15 * hs[2]);
+      ear.scale.set(0.85, 1.25, 0.4); // a rounded point, not a round disc
+      ear.rotation.z = -s * 0.6; // tipped outward, on the top corners of the head
     }
   } else if (o.ears === 'pointy') {
     for (const s of [-1, 1]) {
@@ -281,7 +305,8 @@ export function buildQuadruped(o) {
 
   return {
     root, body, head, neck, legs, tail, trunk,
-    radius: Math.max(halfLen * 0.85, o.bodyR * 1.2),
+    // From the nominal length, so a waisted body keeps room for its head and mane.
+    radius: Math.max((o.bodyLen / 2 + o.bodyR) * 0.85, o.bodyR * 1.2),
     gait: o.gait ?? 8,
   };
 }
