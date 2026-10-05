@@ -111,6 +111,7 @@
       padding: 12px 26px;
     }
     .btn:active { background: var(--accent-dark); }
+    .btn:disabled { opacity: 0.6; }
     #next.glow { animation: glow 1.6s ease-in-out infinite; }
     @keyframes glow {
       0%, 100% { box-shadow: 0 0 0 0 rgba(192, 100, 58, .55); }
@@ -157,8 +158,8 @@
   <div id="cover">
     <h1 id="cover-title">Noah's Ark</h1>
     <div class="lang-row">
-      <button id="btn-es" class="btn lang">Español</button>
-      <button id="btn-en" class="btn lang">English</button>
+      <button id="btn-es" class="btn lang" disabled>Español</button>
+      <button id="btn-en" class="btn lang" disabled>English</button>
     </div>
     <button id="btn-start" class="btn hidden"></button>
   </div>

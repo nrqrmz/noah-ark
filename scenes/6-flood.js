@@ -91,6 +91,10 @@ export default function createScene(ctx) {
         const { p } = person;
         if (!p.root.visible) continue;
         const phase = boarder.step(p, 3.2, dt, { ahead });
+        if (phase === 'inside') {
+          state.inside(person.id); // the door waits until everyone is truly in
+          continue;
+        }
         updatePerson(p, dt, { moving: phase === 'ground' || phase === 'ramp' });
         walking.push(circle(p));
         ahead = p;

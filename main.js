@@ -162,6 +162,9 @@ document.addEventListener('visibilitychange', () => {
 
 async function boot() {
   dicts = await loadDictionaries();
+  // The language buttons stay disabled until the texts have loaded.
+  ui.btnEs.disabled = false;
+  ui.btnEn.disabled = false;
   // Dev shortcut: ?scene=<n>&lang=<es|en> skips the cover.
   const params = new URLSearchParams(location.search);
   const devScene = Number(params.get('scene'));

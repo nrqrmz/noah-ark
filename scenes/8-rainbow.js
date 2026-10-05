@@ -1,7 +1,8 @@
 import * as THREE from 'three';
-import { createRainbowState, GROUPS, RAINBOW_TIME } from './state/rainbow.js';
+import { createRainbowState, GROUPS, RAINBOW_TIME, DOOR_TIME } from './state/rainbow.js';
 import { FAMILY_IDS } from './state/flood.js';
-import { createLandscape, disposeTree, stepToward, keepApart, createBoarding } from './common.js';
+import { createLandscape, disposeTree, stepToward, keepApart, createBoarding, circle } from './common.js';
+import { queueClear } from '../systems/solid.js';
 import { animalsInRound } from '../characters/animals/data.js';
 import { createAnimal, updateAnimal } from '../characters/animals/index.js';
 import { createPerson, familyLook, updatePerson, facePoint } from '../characters/people.js';
@@ -12,7 +13,6 @@ import { createRainbow } from '../world/sky.js';
 const ARK_POS = new THREE.Vector3(0, 0, -5.5);
 const WATER_START = 1.6;
 const WATER_END = -0.8;
-const DOOR_OPEN_TIME = 1.5;
 const STAGGER = 0.35; // seconds between characters walking out
 
 // Where each group gathers on the dry ground.
@@ -59,6 +59,7 @@ export default function createScene(ctx) {
       const dest = new THREE.Vector3(spot.x + (col - 1.5) * 1.3, 0, spot.z + row * 1.4);
       walkers.push({
         ...m,
+        group,
         delay: i * STAGGER,
         points: [doorPoint.clone(), rampFoot.clone(), rampFoot.clone().add(new THREE.Vector3(0, 0, 1.4)), dest],
       });
@@ -92,11 +93,9 @@ export default function createScene(ctx) {
       t += dt;
       landscape.update(dt);
       for (const ev of state.tick(dt)) {
-        if (ev === 'doorOpen') {
-          doorT = 0;
-          // The open door is what the child taps to lead each group out.
-          ctx.tap.mark(ark.door, 'exit');
-        }
+        if (ev === 'doorOpening') doorT = 0;
+        // Once fully open, the door is what the child taps to lead each group out.
+        if (ev === 'doorOpen') ctx.tap.mark(ark.door, 'exit');
         if (ev === 'rainbow') rainbowT = 0;
       }
 
@@ -106,10 +105,13 @@ export default function createScene(ctx) {
       water.update(dt);
       if (doorT >= 0) {
         doorT += dt;
-        ark.setDoor(Math.min(1, doorT / DOOR_OPEN_TIME));
+        ark.setDoor(Math.min(1, doorT / DOOR_TIME));
       }
 
+      // Everyone walks out single file; while on the ramp they are fixed obstacles.
       const solid = [];
+      const onRamp = [];
+      let ahead = null;
       for (const w of walkers) {
         if (w.delay > 0) {
           w.delay -= dt;
@@ -118,19 +120,31 @@ export default function createScene(ctx) {
         const r = w.c.root;
         r.visible = true;
         let moving = false;
-        if (w.points.length) {
+        const flying = w.kind === 'animal' && !!w.c.wings;
+        const descending = w.points.length > 1;
+        const blocked = descending && !flying && ahead && !queueClear(circle(w.c), circle(ahead));
+        if (w.points.length && !blocked) {
           const target = w.points[0];
-          if (stepToward(r.position, target, w.kind === 'animal' && w.c.wings ? 4 : 3, dt)) w.points.shift();
+          if (stepToward(r.position, target, flying ? 4 : 3, dt)) w.points.shift();
           else r.rotation.y = Math.atan2(target.x - r.position.x, target.z - r.position.z);
           moving = true;
         }
+        if (descending && !flying) {
+          ahead = w.c;
+          onRamp.push(circle(w.c));
+        }
         r.position.y = w.kind === 'animal' && w.c.wings && w.points.length ? 0.6 : boarder.height(r.position.z);
-        if (r.position.z > rampFoot.z + 0.5) solid.push(w.c);
+        if (!descending && r.position.z > rampFoot.z + 0.5) solid.push(w.c);
         if (!moving && rainbowT >= 0 && w.kind === 'person') facePoint(w.c, 0, -30); // they look at the rainbow
         if (w.kind === 'person') updatePerson(w.c, dt, { moving, gesture: !moving && rainbowT > 1 && w.c.look === familyLook('noah') ? 'openArms' : null });
         else updateAnimal(w.c, dt, { moving, fly: !!w.c.wings && moving });
       }
-      keepApart(solid, obstacles);
+      keepApart(solid, [...obstacles, ...onRamp]);
+      // A group has cleared the ramp once all its members are heading to their spot.
+      for (const group of GROUPS) {
+        const members = walkers.filter((w) => w.group === group);
+        if (members.length && members.every((w) => w.delay <= 0 && w.points.length <= 1)) state.cleared(group);
+      }
 
       // God sets the rainbow in the clouds (Genesis 9:13); the view rises to the sky.
       if (rainbowT >= 0) {
