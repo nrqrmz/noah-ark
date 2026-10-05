@@ -1,0 +1,41 @@
+{
+  "ui": {
+    "title": "El arca de Noé",
+    "start": "Comenzar",
+    "next": "Siguiente",
+    "again": "Leer otra vez",
+    "switchTo": "English"
+  },
+  "violence": {
+    "text": "En los días de Noé, la tierra se llenó de maldad. Las personas peleaban y se robaban unas a otras, y Dios vio que la tierra estaba llena de violencia. Pero Noé halló gracia ante los ojos de Dios, porque era un hombre justo que caminaba con Dios. Entonces Dios le dijo: «He decidido poner fin a toda esta maldad».",
+    "ref": "Génesis 6:5–13"
+  },
+  "preaching": {
+    "text": "Noé fue un predicador de justicia. Les enseñó a las personas lo que es justo ante Dios. Pero no lo escucharon. Seguían comiendo y bebiendo sin prestar atención a lo que Dios les decía, y no entendieron lo que estaba por venir.",
+    "ref": "2 Pedro 2:5; Mateo 24:38–39"
+  },
+  "blueprint": {
+    "text": "Dios le dijo a Noé: «Hazte un arca de madera de gofer y cúbrela con brea por dentro y por fuera. Mídela de trescientos codos de largo, cincuenta de ancho y treinta de alto. Hazle una ventana, ponle una puerta a un costado y hazla de tres pisos. Voy a enviar un diluvio sobre la tierra, pero contigo haré mi pacto: entrarás en el arca con tu esposa, tus hijos y las esposas de tus hijos».",
+    "ref": "Génesis 6:14–18"
+  },
+  "building": {
+    "text": "Noé tenía tres hijos: Sem, Cam y Jafet. Por la fe, Noé preparó el arca para salvar a su familia. Y Noé hizo todo lo que Dios le mandó.",
+    "ref": "Génesis 6:10, 22; Hebreos 11:7"
+  },
+  "animals": {
+    "text": "Dios le dijo a Noé que llevara al arca una pareja de cada clase de animal, macho y hembra, para conservarlos con vida. También le mandó guardar de todo alimento, para él y para los animales. Y los animales entraron con Noé en el arca, de dos en dos.",
+    "ref": "Génesis 6:19–21; 7:8–9"
+  },
+  "flood": {
+    "text": "Entonces Noé entró en el arca con su esposa, sus hijos y las esposas de sus hijos: ocho personas en total. Y Dios cerró la puerta. Llovió sobre la tierra cuarenta días y cuarenta noches. Las aguas subieron y cubrieron hasta los montes más altos, y el arca flotaba sobre las aguas.",
+    "ref": "Génesis 7:7–20; 1 Pedro 3:20"
+  },
+  "dove": {
+    "text": "Dios se acordó de Noé, y el arca reposó sobre los montes de Ararat. Noé abrió la ventana y soltó un cuervo, que iba y volvía. Después soltó una paloma, pero no halló dónde posarse y regresó. Siete días después la soltó otra vez, y volvió por la tarde con una hoja de olivo en el pico. Siete días más tarde la soltó de nuevo, y ya no regresó.",
+    "ref": "Génesis 8:1–12"
+  },
+  "rainbow": {
+    "text": "Las aguas bajaron y la tierra se secó. Dios le dijo a Noé: «Sal del arca con tu familia y saca a todos los animales». Entonces Dios puso su arco en las nubes como señal de su pacto: «Nunca más habrá un diluvio para destruir la tierra. Cuando aparezca el arco en las nubes, me acordaré de mi pacto».",
+    "ref": "Génesis 8:13–19; 9:11–16"
+  }
+}
