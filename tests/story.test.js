@@ -128,3 +128,11 @@ test('scene context is released on dispose', () => {
   story.next();
   assert.equal(released, 1);
 });
+
+test('locked reflects the current scene', () => {
+  const { story, current } = setup();
+  story.start(1);
+  assert.equal(story.locked, false);
+  current().locked = true;
+  assert.equal(story.locked, true);
+});

@@ -33,6 +33,7 @@ export function createStory({ factories, makeCtx, ui }) {
   return {
     start,
     get index() { return index; },
+    get locked() { return !!scene && scene.isLocked(); },
 
     update(dt) {
       if (!scene) return;

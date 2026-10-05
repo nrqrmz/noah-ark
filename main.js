@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { fitDistance } from './systems/framing.js';
 import { createStory } from './story.js';
+import { createTapSystem } from './systems/tap.js';
 import {
   SCENE_IDS, createTranslator, loadDictionaries, rememberLanguage, recallLanguage,
 } from './i18n.js';
@@ -61,23 +62,11 @@ function resize() {
 new ResizeObserver(resize).observe(stage);
 resize();
 
-// ---------- Taps (temporary; replaced by systems/tap.js) ----------
-const raycaster = new THREE.Raycaster();
-const pointer = new THREE.Vector2();
-const tappables = new Set();
-const tap = {
-  mark(obj, id) { obj.userData.tapId = id; tappables.add(obj); },
-  unmark(obj) { delete obj.userData.tapId; tappables.delete(obj); },
-};
-renderer.domElement.addEventListener('pointerdown', (e) => {
-  const rect = renderer.domElement.getBoundingClientRect();
-  pointer.set(((e.clientX - rect.left) / rect.width) * 2 - 1, -((e.clientY - rect.top) / rect.height) * 2 + 1);
-  raycaster.setFromCamera(pointer, camera);
-  for (const hit of raycaster.intersectObjects([...tappables], true)) {
-    for (let o = hit.object; o; o = o.parent) {
-      if (o.userData.tapId) return story.tap(o.userData.tapId);
-    }
-  }
+// ---------- Taps ----------
+const tap = createTapSystem({
+  camera,
+  dom: renderer.domElement,
+  onTap: (id) => story.tap(id),
 });
 
 // ---------- Language ----------
@@ -117,7 +106,10 @@ const story = createStory({
       camera,
       tap,
       frame(box) { frameBox = box; refit(); },
-      release() { world.remove(root); },
+      release() {
+        tap.clear();
+        world.remove(root);
+      },
     };
   },
   ui: {
@@ -167,7 +159,9 @@ async function boot() {
   if (remembered) setLanguage(remembered);
   story.start(0);
   renderer.setAnimationLoop(() => {
-    story.update(clock.getDelta());
+    const dt = Math.min(clock.getDelta(), 0.05);
+    story.update(dt);
+    tap.update(dt, story.locked);
     renderer.render(world, camera);
   });
 }
