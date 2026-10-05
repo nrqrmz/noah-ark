@@ -152,17 +152,19 @@ const CARROT_PROFILE = (() => {
   return pts;
 })();
 
+const TAP_PROXY_MAT = new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false });
+TAP_PROXY_MAT.userData.shared = true;
+
 // Invisible, larger tap target for a food (radius in the food's local units).
 export function addTapProxy(food, radius = 0.55) {
   const proxy = new THREE.Mesh(geo(`tapProxy${radius}`, () => new THREE.SphereGeometry(radius, 12, 8)), TAP_PROXY_MAT);
   proxy.position.y = 0.3;
   proxy.castShadow = false; // the shadow pass ignores colorWrite
   proxy.receiveShadow = false;
+  proxy.userData.tapProxy = true; // tap.js prefers real meshes over proxies
   food.add(proxy);
   return proxy;
 }
-const TAP_PROXY_MAT = new THREE.MeshBasicMaterial({ colorWrite: false, depthWrite: false });
-TAP_PROXY_MAT.userData.shared = true;
 
 // Food items for scene 5, about half a unit across.
 export function createFood(foodId) {
@@ -177,13 +179,15 @@ export function createFood(foodId) {
       break;
     }
     case 'grass': {
-      // A tuft: thin flat blades fanning out of a small clump, in two greens.
+      // A tuft: thin flat blades fanning out of a small clump.
       mesh(sphere(0.1, 12, 8), mat(0x3f7f2a), g, 0, 0.02).scale.set(1, 0.45, 1);
       const blade = geo('grassBlade', () => new THREE.ConeGeometry(0.05, 1, 4).translate(0, 0.5, 0));
       for (let i = 0; i < 14; i++) {
         const a = i * 2.4; // golden-angle spread around the clump
         const ring = i % 2 ? 0.065 : 0.035;
-        const b = mesh(blade, mat(i % 3 ? 0x6cb33f : 0x4f9a32), g, Math.cos(a) * ring, 0.02, Math.sin(a) * ring);
+        // Two greens, plus a few sunlit yellow-green blades so the tuft stands out on the grass.
+        const color = i % 4 === 0 ? 0xc2dc5e : i % 3 ? 0x6cb33f : 0x4f9a32;
+        const b = mesh(blade, mat(color), g, Math.cos(a) * ring, 0.02, Math.sin(a) * ring);
         b.rotation.order = 'YXZ';
         b.rotation.y = -a;
         b.rotation.z = -(0.18 + (i % 4) * 0.15); // lean outward, away from the center
