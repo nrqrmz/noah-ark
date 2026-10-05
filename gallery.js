@@ -70,6 +70,7 @@ if (view === 'animals') {
     const col = i % 6;
     const row = Math.floor(i / 6);
     for (const [k, sex] of ['male', 'female'].entries()) {
+      if (params.get('sex') && params.get('sex') !== sex) continue; // ?sex=male|female shows one
       const a = createAnimal(id, sex);
       a.root.position.set((col - 2.5) * 3.4 + (k - 0.5) * 1.5, 0, row * -4);
       a.root.rotation.y = Number(params.get('rot') ?? 0.5);

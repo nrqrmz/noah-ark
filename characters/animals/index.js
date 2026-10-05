@@ -60,12 +60,18 @@ const PRESETS = {
     tail: { len: 0.36, r: 0.03, angle: -0.35 }, gait: 10,
   },
   zebra: {
-    color: 0xf7f7f2, bodyR: 0.37, bodyLen: 0.75, bodyY: 0.95, legR: 0.09,
-    headR: 0.24, headScale: [0.9, 0.95, 1.35], snout: { r: 0.5, z: 0.8, color: 0x2a2a2a }, ears: 'pointy',
-    neckLen: 0.35, neckR: 0.15, neckAngle: 0.6, hoof: 0x2a2a2a, crest: 0x1f1f1f,
-    tail: { len: 0.55, r: 0.035, angle: -2.8, tuft: 0x1f1f1f },
-    // Temporary painted stripes on the body; Task 6 rebuilds the zebra.
-    coat: { kind: 'stripes', mark: 0x1f1f1f, parts: { body: 11 } },
+    // A striped horse: long arched neck with an upright mane, a long face angled
+    // down, a hair switch on the tail; stripes over the body, neck, legs and head.
+    color: 0xf7f7f2, bodyR: 0.33, bodyLen: 0.85, bodyY: 1.0, bodyScale: [0.88, 1], legR: 0.075,
+    headR: 0.17, headScale: [0.85, 0.95, 1.1],
+    snout: { horse: true, len: 1.8, tilt: 0.65, back: 0.85, front: 0.5, nose: 0x2a2a2a, nostril: 0x0e0e0e },
+    eyes: { forward: 0.45, up: 0.3, side: 0.7, size: 0.17 }, ears: 'horse', earTip: 0x1f1f1f,
+    neckLen: 0.55, neckR: 0.13, neckTaper: [1.3, 0.8], neckDepth: 1.3, neckAngle: 0.45, hoof: 0x2a2a2a, crest: { style: 'horse', color: 0x1f1f1f },
+    tail: { len: 0.35, r: 0.035, angle: -2.75, hair: { len: 0.4, r: 0.06, color: 0x1f1f1f } },
+    coat: {
+      kind: 'stripes', mark: 0x1f1f1f, parts: { body: 12, neck: 8, legs: 5, head: 5 },
+      pinch: { body: 1, neck: 0.6 }, slant: { body: 0.3 }, bareEnds: { body: 0.06 },
+    },
   },
 };
 
@@ -87,6 +93,7 @@ function femaleOverrides(id) {
     };
   }
   if (id === 'goat') return { goatee: null };
+  if (id === 'zebra') return { coat: { ...PRESETS.zebra.coat, seed: 4 } }; // her own stripe pattern
   return {};
 }
 

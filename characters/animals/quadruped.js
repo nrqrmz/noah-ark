@@ -130,11 +130,15 @@ function addHorns(head, r, { style, color }) {
 export function buildQuadruped(o) {
   const coat = mat(o.color);
   // Painted markings for the parts listed in `o.coat.parts` ({ body, neck, legs, head } counts).
+  // `o.coat.pinch` / `slant` / `bareEnds` ({ part: amount }) shape stripes per part (see coat.js).
   const painted = (part, base, repeat) => {
     const count = o.coat?.parts?.[part];
     if (!count) return null;
     const seed = (o.coat.seed ?? 1) + ['body', 'neck', 'legs', 'head'].indexOf(part);
-    return coatMaterial({ base, mark: o.coat.mark, kind: o.coat.kind, seed, count, repeat });
+    return coatMaterial({
+      base, mark: o.coat.mark, kind: o.coat.kind, seed, count, repeat,
+      pinch: o.coat.pinch?.[part] ?? 0, slant: o.coat.slant?.[part] ?? 0, bareEnds: o.coat.bareEnds?.[part] ?? 0,
+    });
   };
   const root = new THREE.Group();
   const body = new THREE.Group();
@@ -208,15 +212,32 @@ export function buildQuadruped(o) {
   body.add(neck);
   const neckLen = o.neckLen ?? 0.2;
   const neckR = o.neckR ?? o.bodyR * 0.55;
-  const neckCoat = painted('neck', o.color, capsuleRepeat(neckR, neckLen));
-  mesh(neckCoat ? coatCapsule(neckR, neckLen) : capsule(neckR, neckLen), neckCoat ?? coat, neck, 0, neckLen / 2, 0);
+  const neckCoat = painted('neck', o.color, o.neckTaper ? [1, 1] : capsuleRepeat(neckR, neckLen));
+  // `neckTaper` [base, top] (radius factors) makes a cone-like neck, thick at the withers
+  // and slim under the head; it runs from inside the body up to the head's center.
+  const [baseF, topF] = o.neckTaper ?? [1, 1];
+  const neckFrom = -neckR * 0.5;
+  const neckTo = neckLen + neckR * 0.6;
+  const neckMesh = o.neckTaper
+    ? mesh(geo(`taperNeck${neckR}:${neckLen}:${baseF}:${topF}`, () => new THREE.CylinderGeometry(neckR * topF, neckR * baseF, neckTo - neckFrom, 18)), neckCoat ?? coat, neck, 0, (neckFrom + neckTo) / 2, 0)
+    : mesh(neckCoat ? coatCapsule(neckR, neckLen) : capsule(neckR, neckLen), neckCoat ?? coat, neck, 0, neckLen / 2, 0);
+  if (o.neckDepth) neckMesh.scale.z = o.neckDepth; // deeper front to back than side to side (horse)
   const head = new THREE.Group();
   head.position.set(0, neckLen + neckR * 0.6, 0);
   head.rotation.x = -(o.neckAngle ?? 0.6); // keep the face level
   neck.add(head);
-  const headMesh = mesh(sphere(o.headR, 20, 14), painted('head', o.headColor ?? o.color) ?? mat(o.headColor ?? o.color), head);
-  if (o.headScale) headMesh.scale.set(...o.headScale);
-  if (o.headTilt) headMesh.rotation.x = o.headTilt; // nose-down: a sloping brow into the muzzle
+  const headCoat = painted('head', o.headColor ?? o.color);
+  const headMesh = mesh(sphere(o.headR, 20, 14), headCoat ?? mat(o.headColor ?? o.color), head);
+  const hs = o.headScale ?? [1, 1, 1];
+  if (headCoat) {
+    // A painted head turns its poles front to back, so its stripes ring the face
+    // (vertical from the side) instead of running level around it.
+    headMesh.rotation.x = Math.PI / 2 + (o.headTilt ?? 0);
+    headMesh.scale.set(hs[0], hs[2], hs[1]);
+  } else {
+    if (o.headScale) headMesh.scale.set(...o.headScale);
+    if (o.headTilt) headMesh.rotation.x = o.headTilt; // nose-down: a sloping brow into the muzzle
+  }
   if (o.snout?.pads) {
     // Feline muzzle: a nose bridge, two puffy whisker pads, a small chin and a
     // wide triangular nose on top. `r` sets the pad size, `long` how far it reaches.
@@ -283,6 +304,33 @@ export function buildQuadruped(o) {
     }
     const mouth = mesh(capsule(r * 0.022, front * 0.7), nostril, muzzle, 0, -front * 0.62, len + front * 0.45);
     mouth.rotation.z = Math.PI / 2;
+  } else if (o.snout?.horse) {
+    // Horse face: a long muzzle tapering forward and down from the skull (striped
+    // like the head when it is painted), ending in a dark, rounded nose with two
+    // nostrils on its front and a mouth line below.
+    const r = o.headR;
+    const sn = o.snout;
+    const muzzle = new THREE.Group();
+    muzzle.position.set(0, -r * 0.2, r * 0.3); // starts inside the skull
+    muzzle.rotation.x = sn.tilt ?? 0.55; // nose down
+    head.add(muzzle);
+    const len = r * sn.len;
+    const back = r * (sn.back ?? 0.8);
+    const front = r * (sn.front ?? 0.5);
+    const faceMat = painted('head', sn.color ?? o.headColor ?? o.color) ?? mat(sn.color ?? o.headColor ?? o.color);
+    const face = mesh(geo(`horseFace${r}:${len}`, () => new THREE.CylinderGeometry(front, back, len, 18)), faceMat, muzzle, 0, 0, len / 2);
+    face.rotation.x = Math.PI / 2; // narrow end forward
+    face.scale.set(0.8, 1, 0.95); // narrow side to side
+    const noseMat = mat(sn.nose);
+    mesh(sphere(front * 1.1, 16, 12), noseMat, muzzle, 0, 0, len - front * 0.05).scale.set(0.9, 1, 0.95); // dark tip, wider than the face so it hides its rim
+    const nostril = mat(sn.nostril);
+    for (const s of [-1, 1]) {
+      const n = mesh(sphere(front * 0.2, 8, 6), nostril, muzzle, s * front * 0.4, front * 0.12, len + front * 0.8);
+      n.scale.set(0.7, 1.2, 0.5);
+      n.rotation.z = s * 0.35;
+    }
+    const mouth = mesh(capsule(r * 0.02, front * 0.75), nostril, muzzle, 0, -front * 0.55, len + front * 0.55);
+    mouth.rotation.z = Math.PI / 2;
   } else if (o.snout) {
     const snout = mesh(sphere(o.headR * o.snout.r, 14, 10), mat(o.snout.color ?? o.color), head, 0, -o.headR * 0.2, o.headR * o.snout.z);
     snout.scale.set(1, 0.8, o.snout.long ?? 1);
@@ -325,6 +373,14 @@ export function buildQuadruped(o) {
       ear.rotation.z = -s * 1.1;
       ear.scale.z = 0.5;
     }
+  } else if (o.ears === 'horse') {
+    // Tall leaf-shaped ears standing up on top of the skull, tips leaning out.
+    for (const s of [-1, 1]) {
+      const ear = mesh(sphere(o.headR * 0.27, 12, 10), earMat, head, s * o.headR * 0.42, o.headR * 1.05, -o.headR * 0.2);
+      ear.scale.set(0.6, 1.8, 0.4);
+      ear.rotation.z = -s * 0.22;
+      if (o.earTip) mesh(sphere(o.headR * 0.1, 8, 6), mat(o.earTip), ear, 0, o.headR * 0.2, 0);
+    }
   } else if (o.ears === 'big') {
     for (const s of [-1, 1]) {
       const ear = mesh(sphere(o.headR * 0.75, 14, 10), earMat, head, s * o.headR * 0.95, o.headR * 0.05, -o.headR * 0.25);
@@ -335,8 +391,21 @@ export function buildQuadruped(o) {
 
   // Features.
   if (o.mane) addMane(head, neck, o.headR, neckR, neckLen, o.mane);
-  if (o.crest) {
-    // Short upright mane along the neck (zebra).
+  if (o.crest?.style === 'horse') {
+    // Upright brush mane along the whole back of the neck, from between the ears
+    // down to the withers, its base buried in the neck.
+    // It leans with a tapered neck so it stays on the neck's back edge all the way up.
+    const reach = neckLen + neckR * 0.6 + o.headR * 0.5;
+    const depth = neckR * (o.neckDepth ?? 1);
+    const r = neckR * 0.7;
+    const backBase = depth * baseF;
+    const backTop = depth * topF;
+    const lean = Math.atan2(backBase - backTop, neckTo - neckFrom);
+    const crest = mesh(capsule(r, reach - r), mat(o.crest.color), neck, 0, reach / 2, -(backBase + backTop) / 2 * 0.95);
+    crest.scale.set(0.38, 1, 1);
+    crest.rotation.x = lean; // tips its top forward, onto the slimmer upper neck
+  } else if (o.crest) {
+    // Short upright mane along the neck (giraffe).
     const crest = mesh(geo(`crest${neckLen}`, () => new THREE.BoxGeometry(0.06, neckLen + 0.3, 0.14)), mat(o.crest), neck, 0, neckLen / 2 + 0.05, -neckR * 0.75);
     crest.castShadow = true;
   }
@@ -390,6 +459,19 @@ export function buildQuadruped(o) {
     const tLen = o.tail.len;
     mesh(capsule(o.tail.r, tLen), mat(o.tail.color ?? o.color), tail, 0, tLen / 2, 0);
     if (o.tail.tuft) mesh(sphere(o.tail.r * 2.4, 8, 6), mat(o.tail.tuft), tail, 0, tLen + o.tail.r, 0);
+    if (o.tail.hair) {
+      // A hair switch from the end of the tail: covers its tip, swells, then narrows
+      // to a rounded point.
+      const { len: hLen, r: hR, color } = o.tail.hair;
+      mesh(geo(`tailHair${hLen}:${hR}`, () => {
+        const pts = [new THREE.Vector2(1e-4, 0)];
+        for (let i = 0; i <= 12; i++) {
+          const t = i / 12;
+          pts.push(new THREE.Vector2(Math.max(1e-4, hR * Math.sin(Math.PI * (0.18 + 0.82 * t)) ** 0.6), t * hLen));
+        }
+        return new THREE.LatheGeometry(pts, 12);
+      }), mat(color), tail, 0, tLen * 0.75, 0);
+    }
     if (o.tail.puff) mesh(sphere(o.tail.puff, 10, 8), mat(o.tail.color ?? WHITE), tail, 0, 0, 0);
   }
 

@@ -39,12 +39,18 @@ function blob(g, x, y, r, corners, jitter, seed, i) {
 
 // A wavy band around the part at height v. The wave has a whole number of periods around u,
 // so it meets itself at the seam; it is thinner near u = 0/1 (belly on the body).
-function band(g, { v, width, wobble, phase }) {
+// `pinch` (0-1) narrows it further there: at 1 both sides end in a point under the belly,
+// so the band reads as a stripe down each flank instead of a hoop around the part.
+// `slant` sweeps the band's top toward v = 0 (the rump on the body), more for bands
+// near that end, so the hindquarter stripes lean back like a zebra's.
+function band(g, { v, width, wobble, phase }, { pinch = 0, slant = 0 } = {}) {
   const steps = 64;
+  const lean = slant * (1 - v) ** 2;
   const edge = (side) => Array.from({ length: steps + 1 }, (_, k) => {
     const u = k / steps;
-    const taper = 0.55 + 0.45 * (0.5 - 0.5 * Math.cos(u * Math.PI * 2));
-    const center = v + wobble * Math.sin(u * Math.PI * 4 + phase);
+    const round = 0.5 - 0.5 * Math.cos(u * Math.PI * 2); // 0 at the seam, 1 opposite it
+    const taper = (0.55 + 0.45 * round) * (1 - pinch) + Math.sqrt(round) * pinch;
+    const center = v + wobble * Math.sin(u * Math.PI * 4 + phase) - lean * round;
     return [u * SIZE, (1 - (center + side * taper * width / 2)) * SIZE];
   });
   const top = edge(1);
@@ -57,7 +63,7 @@ function band(g, { v, width, wobble, phase }) {
 }
 
 // One material per call (not shared), so disposeTree frees it and its texture.
-export function coatMaterial({ base, mark, kind, seed = 1, count, repeat = [1, 1] }) {
+export function coatMaterial({ base, mark, kind, seed = 1, count, repeat = [1, 1], pinch = 0, slant = 0, bareEnds = 0 }) {
   const canvas = document.createElement('canvas');
   canvas.width = canvas.height = SIZE;
   const g = canvas.getContext('2d');
@@ -67,7 +73,9 @@ export function coatMaterial({ base, mark, kind, seed = 1, count, repeat = [1, 1
 
   const shapes = markings(kind, { seed, count });
   if (kind === 'stripes') {
-    for (const s of shapes) band(g, s);
+    // `bareEnds` leaves the tips of the part plain: a band there would be a small
+    // ring (a bullseye) on the capsule's end cap.
+    for (const s of shapes) if (s.v > bareEnds && s.v < 1 - bareEnds) band(g, s, { pinch, slant });
   } else {
     const [corners, jitter] = kind === 'patches' ? [6, 0.18] : [10, 0.22];
     shapes.forEach((s, i) => {
