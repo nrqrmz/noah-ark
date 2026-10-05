@@ -1,0 +1,41 @@
+{
+  "ui": {
+    "title": "Noah's Ark",
+    "start": "Start",
+    "next": "Next",
+    "again": "Read again",
+    "switchTo": "Español"
+  },
+  "violence": {
+    "text": "In Noah's days, the earth was filled with wickedness. People fought and stole from one another, and God saw that the earth was full of violence. But Noah found grace in the eyes of God, for he was a righteous man who walked with God. Then God said to him, \"I have decided to put an end to all this wickedness.\"",
+    "ref": "Genesis 6:5–13"
+  },
+  "preaching": {
+    "text": "Noah was a preacher of righteousness. He taught the people what is right before God. But they would not listen. They kept eating and drinking without paying attention to what God was telling them, and they did not understand what was coming.",
+    "ref": "2 Peter 2:5; Matthew 24:38–39"
+  },
+  "blueprint": {
+    "text": "God said to Noah, \"Make yourself an ark of gopher wood and cover it with pitch inside and out. Make it three hundred cubits long, fifty wide, and thirty high. Give it a window, put a door in its side, and build it with three decks. I am going to send a flood upon the earth, but with you I will make my covenant: you will enter the ark with your wife, your sons, and your sons' wives.\"",
+    "ref": "Genesis 6:14–18"
+  },
+  "building": {
+    "text": "Noah had three sons: Shem, Ham, and Japheth. By faith, Noah prepared the ark to save his family. And Noah did everything God commanded him.",
+    "ref": "Genesis 6:10, 22; Hebrews 11:7"
+  },
+  "animals": {
+    "text": "God told Noah to bring into the ark a pair of every kind of animal, male and female, to keep them alive. He also told him to store every kind of food, for himself and for the animals. And the animals went into the ark with Noah, two by two.",
+    "ref": "Genesis 6:19–21; 7:8–9"
+  },
+  "flood": {
+    "text": "Then Noah went into the ark with his wife, his sons, and his sons' wives: eight people in all. And God shut the door. It rained on the earth forty days and forty nights. The waters rose and covered even the highest mountains, and the ark floated on the waters.",
+    "ref": "Genesis 7:7–20; 1 Peter 3:20"
+  },
+  "dove": {
+    "text": "God remembered Noah, and the ark came to rest on the mountains of Ararat. Noah opened the window and sent out a raven, which went to and fro. Then he sent out a dove, but it found no place to rest and came back. Seven days later he sent it out again, and in the evening it returned with an olive leaf in its beak. Seven days after that he sent it out once more, and it did not come back.",
+    "ref": "Genesis 8:1–12"
+  },
+  "rainbow": {
+    "text": "The waters went down and the earth became dry. God said to Noah, \"Come out of the ark with your family, and bring out all the animals.\" Then God set his bow in the clouds as the sign of his covenant: \"Never again will there be a flood to destroy the earth. When the bow appears in the clouds, I will remember my covenant.\"",
+    "ref": "Genesis 8:13–19; 9:11–16"
+  }
+}

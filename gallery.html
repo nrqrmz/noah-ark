@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Noah's Ark — model gallery</title>
+  <link rel="icon" href="data:," />
+  <style>
+    html, body { margin: 0; height: 100%; overflow: hidden; background: #9fd3f0; font-family: system-ui, sans-serif; }
+    canvas { display: block; }
+    nav { position: fixed; top: 8px; left: 8px; display: flex; gap: 6px; }
+    nav a { background: #fff; padding: 4px 10px; border-radius: 6px; color: #333; text-decoration: none; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <!-- Dev-only page for checking models: ?view=people|animals|world -->
+  <nav><a href="?view=people">people</a><a href="?view=animals">animals</a><a href="?view=world">world</a></nav>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+      }
+    }
+  </script>
+  <script type="module" src="gallery.js"></script>
+</body>
+</html>
