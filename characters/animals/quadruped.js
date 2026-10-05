@@ -92,9 +92,9 @@ function addMane(head, neck, r, neckR, neckLen, hex) {
 // (direction, length) that bend the horn along a curve to a point.
 const HORNS = {
   // Cow: short, out to the side then up.
-  cow: { base: [0.45, 0.78, -0.15], r: 0.13, segs: [[[1, 0.3, 0], 0.3], [[0.8, 0.8, 0], 0.24], [[0.25, 1, 0], 0.2], [[-0.1, 1, 0.05], 0.17]] },
+  cow: { base: [0.42, 0.68, -0.15], r: 0.13, segs: [[[1, 0.3, 0], 0.3], [[0.8, 0.8, 0], 0.24], [[0.25, 1, 0], 0.2], [[-0.1, 1, 0.05], 0.17]] },
   // Bull: long and thick, out sideways then curving forward.
-  bull: { base: [0.45, 0.78, -0.15], r: 0.17, segs: [[[1, 0.2, 0], 0.42], [[1, 0.3, 0.3], 0.38], [[0.5, 0.35, 1], 0.34], [[0, 0.3, 1], 0.28]] },
+  bull: { base: [0.42, 0.68, -0.15], r: 0.17, segs: [[[1, 0.2, 0], 0.42], [[1, 0.3, 0.3], 0.38], [[0.5, 0.35, 1], 0.34], [[0, 0.3, 1], 0.28]] },
   // Goat: long, up then sweeping back over the neck.
   goat: { base: [0.3, 0.78, -0.05], r: 0.15, segs: [[[0.1, 1, -0.1], 0.6], [[0.15, 0.75, -0.75], 0.55], [[0.15, 0.1, -1], 0.5], [[0.1, -0.5, -1], 0.42]] },
 };
@@ -236,6 +236,44 @@ export function buildQuadruped(o) {
       nose.rotation.x = Math.PI / 2; // apex forward, one corner pointing down
       nose.scale.set(1.2, 0.6, 0.8);
     }
+  } else if (o.snout?.bovine) {
+    // Cattle muzzle: a broad, flat pad across the front of the long head (a capsule
+    // lying sideways, flattened front to back) with two oval nostrils on its front face.
+    const r = o.headR;
+    const sn = o.snout;
+    const front = r * sn.z;
+    const pad = mesh(capsule(r * 0.36, r * 0.4), mat(sn.color), head, 0, -r * 0.3, front);
+    pad.rotation.z = Math.PI / 2;
+    pad.scale.set(0.95, 1, 0.8);
+    const nostril = mat(sn.nostril);
+    for (const s of [-1, 1]) {
+      const n = mesh(sphere(r * 0.075, 10, 8), nostril, head, s * r * 0.2, -r * 0.24, front + r * 0.27);
+      n.scale.set(0.8, 1.2, 0.5);
+      n.rotation.z = s * 0.45; // tipped toward each other, like a cow's nostrils
+    }
+  } else if (o.snout?.caprine) {
+    // Goat muzzle: a narrow muzzle tapering forward and a little down from the long
+    // face, a small dark nose pad with two nostrils at its tip, and a mouth line below.
+    const r = o.headR;
+    const sn = o.snout;
+    const tilt = 0.35;
+    const dir = new THREE.Vector3(0, -Math.sin(tilt), Math.cos(tilt));
+    const center = new THREE.Vector3(0, -r * 0.22, r * sn.z);
+    const muzzle = mesh(capsule(r * 0.34, r * 0.75), mat(sn.color ?? o.color), head, center.x, center.y, center.z);
+    muzzle.rotation.x = Math.PI / 2 + tilt;
+    muzzle.scale.set(0.72, 1, 0.82); // narrow and a bit flat
+    const tip = center.clone().addScaledVector(dir, r * 0.64);
+    const pad = mesh(sphere(r * 0.18, 12, 10), mat(sn.nose), head, tip.x, tip.y, tip.z);
+    pad.rotation.x = tilt;
+    pad.scale.set(1.1, 0.8, 0.6);
+    const nostril = mat(sn.nostril);
+    for (const s of [-1, 1]) {
+      const n = mesh(sphere(r * 0.045, 8, 6), nostril, head, s * r * 0.08, tip.y + r * 0.01, tip.z + r * 0.1);
+      n.scale.set(0.8, 1.2, 0.6);
+      n.rotation.z = s * 0.4;
+    }
+    const mouth = mesh(capsule(r * 0.02, r * 0.16), nostril, head, 0, tip.y - r * 0.15, tip.z - r * 0.02);
+    mouth.rotation.z = Math.PI / 2;
   } else if (o.snout) {
     const snout = mesh(sphere(o.headR * o.snout.r, 14, 10), mat(o.snout.color ?? o.color), head, 0, -o.headR * 0.2, o.headR * o.snout.z);
     snout.scale.set(1, 0.8, o.snout.long ?? 1);
