@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { FAMILY, createPerson, createTownsperson, updatePerson } from './characters/people.js';
+import { ANIMALS } from './characters/animals/data.js';
+import { createAnimal, updateAnimal } from './characters/animals/index.js';
 
 // Dev-only model gallery. ?view=people|animals|world; ?cam=x,y,z&target=x,y,z to zoom.
 const params = new URLSearchParams(location.search);
@@ -50,6 +52,32 @@ if (view === 'people') {
     clock += dt;
     const g = fixed ?? GESTURES[Math.floor(clock / 2) % GESTURES.length];
     people.forEach((p, i) => updatePerson(p, dt, { moving: !fixed && i % 3 === 0, gesture: g === 'null' ? null : g }));
+  });
+}
+
+if (view === 'animals') {
+  // Male and female side by side, two rows of six species.
+  const animals = [];
+  const only = params.get('only')?.split(',');
+  ANIMALS.filter(({ id }) => !only || only.includes(id)).forEach(({ id }, i) => {
+    const col = i % 6;
+    const row = Math.floor(i / 6);
+    for (const [k, sex] of ['male', 'female'].entries()) {
+      const a = createAnimal(id, sex);
+      a.root.position.set((col - 2.5) * 3.4 + (k - 0.5) * 1.5, 0, row * -4);
+      a.root.rotation.y = Number(params.get('rot') ?? 0.5);
+      scene.add(a.root);
+      animals.push(a);
+    }
+  });
+  const mode = params.get('mode');
+  let clock = 0;
+  updaters.push((dt) => {
+    clock += dt;
+    const phase = mode ?? ['walk', 'shake', 'idle'][Math.floor(clock / 2) % 3];
+    for (const a of animals) {
+      updateAnimal(a, dt, { moving: phase === 'walk', shake: phase === 'shake', fly: phase === 'fly' && !!a.wings });
+    }
   });
 }
 
