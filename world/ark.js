@@ -102,6 +102,7 @@ export function createArk({ length = 14 } = {}) {
     // Where the ramp meets the ground, in the ark's local space.
     rampFoot: new THREE.Vector3(length * 0.12, 0, width / 2 + Math.sqrt(Math.max(0, doorH * doorH - doorY * doorY))),
     doorPoint: new THREE.Vector3(length * 0.12, doorY, width / 2),
+    door: hinge,
     setBuilt(p) { built = Math.max(0, Math.min(1, p)); apply(); },
     setDoor(p) { doorOpen = Math.max(0, Math.min(1, p)); apply(); },
     // Solidity footprint: circles along the hull, in the ark's local space.

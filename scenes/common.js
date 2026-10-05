@@ -59,6 +59,7 @@ export function createBoarding(rampFoot, doorPoint) {
     return Math.max(0, Math.min(1, u)) * doorPoint.y;
   };
   return {
+    height: rampHeight,
     // Waypoints: in front of the ramp, its foot, the doorway, inside.
     path: () => [
       rampFoot.clone().add(new THREE.Vector3(0, 0, 1.2)),
