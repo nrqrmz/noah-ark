@@ -38,6 +38,8 @@ world.add(new THREE.HemisphereLight(0xffffff, 0x5a8f3a, 0.7));
 const sun = new THREE.DirectionalLight(0xffffff, 1.6);
 sun.position.set(8, 14, 6);
 sun.castShadow = true;
+sun.shadow.bias = -0.0005;
+sun.shadow.normalBias = 0.03;
 world.add(sun);
 
 // ---------- Framing ----------
