@@ -1,9 +1,9 @@
 import * as THREE from 'three';
 
-const GLOW_COLOR = new THREE.Color(0xffd27a);
+const GLOW_COLOR = new THREE.Color(0xfff0c8);
 const PULSE_PERIOD = 1.6;
-const GLOW = 0.25;
-const HINT_GLOW = 0.5;
+const GLOW = 0.2;
+const HINT_GLOW = 0.4;
 const HINT_AFTER = 6; // seconds without a tap before the glow gets stronger
 
 // Tap input and the soft glow on tappable objects.
