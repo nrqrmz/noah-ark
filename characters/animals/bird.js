@@ -4,8 +4,11 @@ import { addEyes } from './quadruped.js';
 
 const LOOKS = {
   dove: { body: 0xf4f4f0, wing: 0xe2e2dc, beak: 0xd9a0a0, feet: 0xd98080 },
-  raven: { body: 0x26262e, wing: 0x1b1b22, beak: 0x1b1b1b, feet: 0x3a3a3a },
+  raven: { body: 0x26262e, wing: 0x1b1b22 },
 };
+// The raven shares the dove's beak and feet colors.
+LOOKS.raven.beak = LOOKS.dove.beak;
+LOOKS.raven.feet = LOOKS.dove.feet;
 
 // Dove or raven facing +Z. Wings hinge at the shoulders (inside the body).
 export function buildBird(kind) {
