@@ -15,13 +15,14 @@ export function createRainbowState() {
   ]);
   const finale = createSequence([{ duration: RAINBOW_TIME, start: 'rainbow' }]);
   const exiting = new Set();
-  const cleared = new Set();
+  const settled = new Set();
   intro.begin();
 
   return {
-    // Locked while God's animations play and while a group is still on the ramp.
+    // Locked while God's animations play and until the last group called has
+    // reached its slots.
     get locked() {
-      return !intro.finished || exiting.size > cleared.size || cleared.size === GROUPS.length;
+      return !intro.finished || exiting.size > settled.size || settled.size === GROUPS.length;
     },
     get done() { return finale.finished; },
 
@@ -31,10 +32,11 @@ export function createRainbowState() {
       return `exit:${id}`;
     },
 
-    // The view reports when every member of a group is off the ramp.
-    cleared(id) {
-      if (exiting.has(id)) cleared.add(id);
-      if (cleared.size === GROUPS.length) finale.begin();
+    // The view reports when every member of a group has reached its slot.
+    settled(id) {
+      if (!exiting.has(id) || settled.has(id)) return;
+      settled.add(id);
+      if (settled.size === GROUPS.length) finale.begin();
     },
 
     tick(dt) {

@@ -5,7 +5,7 @@ import { run } from './helpers.js';
 
 const INTRO = RECEDE_TIME + DOOR_TIME;
 const ready = () => { const s = createRainbowState(); run(s, INTRO + 0.1); return s; };
-const exitAll = (s) => { for (const g of GROUPS) { s.tap(g); s.cleared(g); } };
+const exitAll = (s) => { for (const g of GROUPS) { s.tap(g); s.settled(g); } };
 
 test('four groups leave the ark', () => {
   assert.deepEqual(GROUPS, ['exit-family', 'exit-round-1', 'exit-round-2', 'exit-round-3']);
@@ -25,7 +25,7 @@ test('taps are ignored while the water recedes and the door opens', () => {
 test('each group exits once', () => {
   const s = ready();
   assert.equal(s.tap('exit-round-2'), 'exit:exit-round-2');
-  s.cleared('exit-round-2');
+  s.settled('exit-round-2');
   assert.equal(s.tap('exit-round-2'), null);
 });
 
@@ -33,14 +33,30 @@ test('unknown ids are ignored', () => {
   assert.equal(ready().tap('rainbow'), null);
 });
 
-test('locked until the group on the ramp has cleared it', () => {
+test('locked until the previous group has settled', () => {
   const s = ready();
   s.tap('exit-family');
   assert.equal(s.locked, true);
   assert.equal(s.tap('exit-round-1'), null);
-  s.cleared('exit-family');
+  s.settled('exit-family');
   assert.equal(s.locked, false);
   assert.equal(s.tap('exit-round-1'), 'exit:exit-round-1');
+});
+
+test('tap is ignored while the previous group is still walking to its slots', () => {
+  const s = ready();
+  assert.equal(s.tap('exit-family'), 'exit:exit-family');
+  assert.equal(s.tap('exit-round-1'), null);
+  s.settled('exit-family');
+  assert.equal(s.tap('exit-round-1'), 'exit:exit-round-1');
+});
+
+test('settled is ignored for a group that has not been called', () => {
+  const s = ready();
+  s.settled('exit-family');
+  assert.equal(s.locked, false);
+  assert.equal(s.tap('exit-family'), 'exit:exit-family');
+  assert.equal(s.locked, true);
 });
 
 test('tap while locked is ignored', () => {
@@ -50,13 +66,13 @@ test('tap while locked is ignored', () => {
   assert.equal(s.tap('exit-family'), null);
 });
 
-test('rainbow only after all groups cleared the ramp', () => {
+test('rainbow only after all groups settled', () => {
   const s = ready();
-  for (const g of GROUPS.slice(0, 3)) { s.tap(g); s.cleared(g); }
+  for (const g of GROUPS.slice(0, 3)) { s.tap(g); s.settled(g); }
   assert.deepEqual(run(s, 5), []);
   s.tap(GROUPS[3]);
   assert.deepEqual(run(s, 5), []);
-  s.cleared(GROUPS[3]);
+  s.settled(GROUPS[3]);
   assert.ok(run(s, 0.1).includes('rainbow'));
 });
 
