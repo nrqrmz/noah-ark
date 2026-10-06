@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createBuildingState, TREES, FINISH_TIME } from '../scenes/state/building.js';
+import { createBuildingState, TREES, FINISH_TIME, TREE_X, TREE_Z, LANE_Z, SON_FOR_TREE, workSpot, sonStretch } from '../scenes/state/building.js';
 import { run } from './helpers.js';
 
 const finishTree = (s, i) => [s.tap(`tree-${i}`), s.tap(`logs-${i}`), s.tap(`planks-${i}`)];
@@ -52,4 +52,23 @@ test('done after FINISH_TIME following the last plank', () => {
   assert.equal(s.done, false);
   run(s, 0.4);
   assert.equal(s.done, true);
+});
+
+test('Shem cuts trees 1 and 2, Ham 3, Japheth 4', () => {
+  assert.deepEqual(SON_FOR_TREE, [0, 0, 1, 2]);
+});
+
+test("sons' stretches never overlap", () => {
+  for (let k = 0; k < 3; k++) {
+    for (let m = k + 1; m < 3; m++) assert.ok(sonStretch(k)[1] < sonStretch(m)[0], `${k} vs ${m}`);
+  }
+});
+
+test('work spots sit on the lane, clear of every trunk', () => {
+  for (let i = 0; i < TREES; i++) {
+    assert.equal(workSpot(i).z, LANE_Z);
+    for (let j = 0; j < TREES; j++) {
+      assert.ok(Math.hypot(workSpot(i).x - TREE_X[j], LANE_Z - TREE_Z) >= 1.1);
+    }
+  }
 });
