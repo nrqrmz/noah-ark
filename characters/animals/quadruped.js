@@ -324,12 +324,23 @@ export function buildQuadruped(o) {
     face.rotation.x = Math.PI / 2; // narrow end forward
     face.scale.set(0.8, 1, 0.95); // narrow side to side
     const noseMat = mat(sn.nose);
-    mesh(sphere(front * 1.1, 16, 12), noseMat, muzzle, 0, 0, len - front * 0.05).scale.set(0.9, 1, 0.95); // dark tip, wider than the face so it hides its rim
+    // Rounded tip, wider than the face so it hides its rim (`tip` sets its size).
+    const tipR = front * (sn.tip ?? 1.1);
+    mesh(sphere(tipR, 16, 12), noseMat, muzzle, 0, 0, len - front * 0.05).scale.set(0.9, 1, 0.95);
     const nostril = mat(sn.nostril);
     for (const s of [-1, 1]) {
-      const n = mesh(sphere(front * 0.2, 8, 6), nostril, muzzle, s * front * 0.4, front * 0.12, len + front * 0.8);
-      n.scale.set(0.7, 1.2, 0.5);
-      n.rotation.z = s * 0.35;
+      if (sn.slits) {
+        // Narrow slit nostrils high on the soft lip, tops leaning in (giraffe).
+        // Set into the tip's front surface at that height.
+        const z = len - front * 0.05 + 0.95 * Math.sqrt(tipR ** 2 - (front * 0.4) ** 2) - front * 0.04;
+        const n = mesh(sphere(front * 0.2, 8, 6), nostril, muzzle, s * front * 0.36, front * 0.4, z);
+        n.scale.set(0.3, 1.3, 0.4);
+        n.rotation.z = s * 0.5;
+      } else {
+        const n = mesh(sphere(front * 0.2, 8, 6), nostril, muzzle, s * front * 0.4, front * 0.12, len + front * 0.8);
+        n.scale.set(0.7, 1.2, 0.5);
+        n.rotation.z = s * 0.35;
+      }
     }
     const mouth = mesh(capsule(r * 0.02, front * 0.75), nostril, muzzle, 0, -front * 0.55, len + front * 0.55);
     mouth.rotation.z = Math.PI / 2;
@@ -371,7 +382,7 @@ export function buildQuadruped(o) {
     }
   } else if (o.ears === 'side') {
     for (const s of [-1, 1]) {
-      const ear = mesh(capsule(o.headR * 0.16, o.headR * 0.45), earMat, head, s * o.headR * 0.85, o.headR * 0.45, -o.headR * 0.1);
+      const ear = mesh(capsule(o.headR * 0.16, o.headR * 0.45), earMat, head, s * o.headR * 0.85, o.headR * 0.45, -o.headR * (o.earBack ?? 0.1));
       ear.rotation.z = -s * 1.1;
       ear.scale.z = 0.5;
     }

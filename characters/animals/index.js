@@ -8,7 +8,7 @@ const PRESETS = {
   lion: {
     color: 0xd9a650, bodyR: 0.27, bodyLen: 0.56, bodyY: 0.8, bodyScale: [0.88, 1], waist: 0.8, legR: 0.08, legTaper: 0.65,
     headR: 0.23, headScale: [1, 0.92, 1.12], snout: { pads: true, r: 0.45, z: 0.95, long: 1.1, color: 0xf2dcae, nose: 0x5a3a2a },
-    ears: 'feline', eyes: { forward: 0.95, up: 0.22, side: 0.42, size: 0.14 }, neckLen: 0.42, neckR: 0.14, neckAngle: 0.7, paws: true,
+    ears: 'feline', eyes: { forward: 0.95, up: 0.22, side: 0.42, size: 0.14 }, neckLen: 0.2, neckR: 0.17, neckAngle: 0.9, paws: true,
     tail: { len: 0.7, r: 0.035, angle: -2.3, tuft: 0x8a4d1e }, mane: 0x9a5422, gait: 9,
   },
   cow: {
@@ -22,9 +22,12 @@ const PRESETS = {
   },
   giraffe: {
     color: 0xeec46b, bodyR: 0.36, bodyLen: 0.6, bodyY: 1.55, legR: 0.09,
-    headR: 0.25, headScale: [0.9, 0.9, 1.25], snout: { r: 0.5, z: 0.7, color: 0xe8b65a, nose: 0x6b4a2b }, ears: 'side',
-    // Big eyes standing out from the sides of the long head, above and behind the muzzle.
-    eyes: { forward: 0.62, up: 0.38, side: 0.76, size: 0.19 },
+    // A long, narrow head like a slim horse's: the muzzle continues the head line,
+    // angled down, and ends in a soft, lighter lip with two slit nostrils on top.
+    headR: 0.19, headScale: [0.75, 0.85, 1.45], headTilt: 0.3,
+    snout: { horse: true, slits: true, len: 1.7, tilt: 0.4, back: 0.85, front: 0.52, tip: 0.95, color: 0xeec46b, nose: 0xf2d9a6, nostril: 0x6b4a2b },
+    // Eyes high on the sides of the skull, toward the back; ears out sideways behind the ossicones.
+    eyes: { forward: 0.4, up: 0.42, side: 0.64, size: 0.17 }, ears: 'side', earBack: 0.5,
     neckLen: 1.3, neckR: 0.13, neckAngle: 0.35, ossicones: 0x6b4a2b, hoof: 0x5a4030,
     coat: { kind: 'patches', mark: 0xa86a32, parts: { body: 36, neck: 18, legs: 14 } },
     tail: { len: 0.5, r: 0.03, angle: -2.8, tuft: 0x5a4030 }, crest: 0xa86a32,
@@ -101,8 +104,6 @@ function femaleOverrides(id) {
 
 // Male variations: the bull is the cow's husband, so it is built from the cow preset.
 function maleOverrides(id) {
-  // A longer neck, so it still shows below the mane.
-  if (id === 'lion') return { neckLen: 0.55, neckAngle: 0.75 };
   if (id === 'cow') {
     // Bull: solid dark brown with no spots, heavier shoulders, big forward-curving horns.
     return {

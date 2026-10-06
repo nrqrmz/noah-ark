@@ -5,16 +5,20 @@ import { addEyes } from './quadruped.js';
 const GREEN = 0x4f9a45;
 const DARK_GREEN = 0x3a7a34;
 const BELLY = 0xc3d68a;
+const HALF_LEN = 1.255; // half of the snout-to-tail length
 
 // Friendly crocodile, adapted from coin-collector's model: rounded snout,
 // no teeth, big eyes, and legs attached inside the body. Faces +Z.
-// Long and low like a real one: about 2.5 long and 0.4 wide, belly near the
-// ground, a slim snout and short legs splayed out to the sides.
+// Long and low like a real one: about 2.5 long, a 0.41-wide body (0.6 across
+// the splayed feet), belly near the ground, a slim snout and short legs.
 export function buildCrocodile() {
   const skin = mat(GREEN);
   const dark = mat(DARK_GREEN);
   const root = new THREE.Group();
   const body = new THREE.Group();
+  // Built from z -1.51 (tail tip) to +0.99 (snout); shifting the body forward
+  // centres the model on the root, so its solid circle covers it evenly.
+  body.position.z = HALF_LEN - 0.995;
   root.add(body);
 
   const bodyY = 0.19;
@@ -93,5 +97,7 @@ export function buildCrocodile() {
   }
   tail.userData.segs = segs;
 
-  return { root, body, head, upperJaw, legs, tail, radius: 0.7, gait: 7 };
+  // Single-file queues let circles overlap by 15% (`queueClear` slack 0.85), so the
+  // radius is the half-length / 0.85: a follower's snout stops at the leader's tail tip.
+  return { root, body, head, upperJaw, legs, tail, radius: HALF_LEN / 0.85, gait: 7 };
 }
