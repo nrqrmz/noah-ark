@@ -6,6 +6,27 @@ const GLOW = 0.2;
 const HINT_GLOW = 0.4;
 const HINT_AFTER = 6; // seconds without a tap before the glow gets stronger
 
+// The tappable object for a list of raycast hits (nearest first). A real mesh
+// wins over an invisible tap proxy (userData.tapProxy), even one in front of it,
+// so a food's enlarged target never steals a tap aimed at an animal behind it.
+function pickTarget(hits) {
+  const owner = (hit) => {
+    let o = hit.object;
+    while (o && !o.userData.tapId) o = o.parent;
+    return o;
+  };
+  for (const hit of hits) {
+    if (hit.object.userData.tapProxy) continue;
+    const o = owner(hit);
+    if (o) return o;
+  }
+  for (const hit of hits) {
+    const o = owner(hit);
+    if (o) return o;
+  }
+  return null;
+}
+
 // Tap input and the soft glow on tappable objects.
 export function createTapSystem({ camera, dom, onTap }) {
   const raycaster = new THREE.Raycaster();
@@ -24,14 +45,8 @@ export function createTapSystem({ camera, dom, onTap }) {
       -((e.clientY - rect.top) / rect.height) * 2 + 1
     );
     raycaster.setFromCamera(pointer, camera);
-    for (const hit of raycaster.intersectObjects([...marked.keys()], true)) {
-      for (let o = hit.object; o; o = o.parent) {
-        if (o.userData.tapId) {
-          onTap(o.userData.tapId);
-          return;
-        }
-      }
-    }
+    const target = pickTarget(raycaster.intersectObjects([...marked.keys()], true));
+    if (target) onTap(target.userData.tapId);
   }
   dom.addEventListener('pointerdown', onPointerDown);
 
@@ -93,9 +108,7 @@ export function createTapSystem({ camera, dom, onTap }) {
         for (const c of candidates) {
           const ndc = c.clone().project(camera);
           raycaster.setFromCamera(new THREE.Vector2(ndc.x, ndc.y), camera);
-          const hit = raycaster.intersectObjects([...marked.keys()], true)[0];
-          let o = hit?.object;
-          while (o && !o.userData.tapId) o = o.parent;
+          const o = pickTarget(raycaster.intersectObjects([...marked.keys()], true));
           if (o === obj) return { x: rect.left + ((ndc.x + 1) / 2) * rect.width, y: rect.top + ((1 - ndc.y) / 2) * rect.height };
         }
       }

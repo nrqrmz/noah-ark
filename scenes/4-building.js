@@ -1,13 +1,11 @@
 import * as THREE from 'three';
-import { createBuildingState, TREES } from './state/building.js';
+import { createBuildingState, TREES, TREE_X, TREE_Z, SON_FOR_TREE, SON_HOMES, workSpot } from './state/building.js';
 import { createLandscape, disposeTree, stepToward, keepApart } from './common.js';
 import { createPerson, familyLook, updatePerson, facePoint } from '../characters/people.js';
 import { createArk } from '../world/ark.js';
 import { createTree } from '../world/props.js';
 
 const ARK_POS = new THREE.Vector3(0, 0, -5);
-const TREE_X = [-5.4, -1.8, 1.8, 5.4];
-const TREE_Z = 3;
 const SONS = ['shem', 'ham', 'japheth'];
 const CHOP_TIME = 1.4; // a son's axe strokes before the tree changes
 const FLY_TIME = 1.3;
@@ -27,8 +25,8 @@ export default function createScene(ctx) {
 
   // A son walks to tree i and works there; `then` runs when he is done.
   function assignWork(i, then) {
-    const son = sons[i % SONS.length];
-    son.jobs.push({ tree: i, spot: new THREE.Vector3(TREE_X[i] + 1.1, 0, TREE_Z + 0.4), t: CHOP_TIME, then });
+    const son = sons[SON_FOR_TREE[i]];
+    son.jobs.push({ tree: i, spot: new THREE.Vector3(workSpot(i).x, 0, workSpot(i).z), t: CHOP_TIME, then });
   }
 
   function updateSon(son, dt) {
@@ -66,6 +64,7 @@ export default function createScene(ctx) {
       ark.setBuilt(0);
       ctx.root.add(ark.root);
       obstacles = ark.footprint.map((c) => ({ x: c.x + ARK_POS.x, z: c.z + ARK_POS.z, r: c.r }));
+      TREE_X.forEach((x) => obstacles.push({ x, z: TREE_Z, r: 0.45 }));
 
       TREE_X.forEach((x, i) => {
         const tree = createTree();
@@ -78,7 +77,7 @@ export default function createScene(ctx) {
 
       SONS.forEach((id, k) => {
         const p = createPerson(familyLook(id));
-        const home = new THREE.Vector3(-3.6 + k * 3.6, 0, TREE_Z + 0.6); // between the trees
+        const home = new THREE.Vector3(SON_HOMES[k].x, 0, SON_HOMES[k].z); // on the lane
         p.root.position.copy(home);
         ctx.root.add(p.root);
         sons.push({ p, home, jobs: [] });

@@ -3,12 +3,16 @@ import { createGround, createHills } from '../world/terrain.js';
 import { createClouds, setSky } from '../world/sky.js';
 import { separate, queueClear } from '../systems/solid.js';
 
-// Frees every geometry/material under `root` except the shared character cache.
+// Frees every geometry/material (and its texture) under `root` except the shared character cache.
 export function disposeTree(root) {
   root.traverse((o) => {
     if (o.geometry && !o.geometry.userData.shared) o.geometry.dispose();
     const mats = Array.isArray(o.material) ? o.material : o.material ? [o.material] : [];
-    for (const m of mats) if (!m.userData.shared) m.dispose();
+    for (const m of mats) {
+      if (m.userData.shared) continue;
+      m.map?.dispose(); // painted coats own their canvas texture
+      m.dispose();
+    }
   });
 }
 

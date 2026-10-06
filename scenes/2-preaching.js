@@ -1,17 +1,36 @@
 import * as THREE from 'three';
-import { createPreachingState } from './state/preaching.js';
+import { createPreachingState, LISTENERS } from './state/preaching.js';
 import { createLandscape, disposeTree, stepToward, keepApart } from './common.js';
 import { createPerson, createTownsperson, familyLook, updatePerson, facePoint } from '../characters/people.js';
 import { createHouse } from '../world/props.js';
 import { mat, mesh, sphere } from '../characters/rig.js';
 
-// Tappable listeners around Noah, each with its reaction once tapped.
-const LISTENERS = [
-  { id: 'person-laugh', seed: 3, at: [-2.8, -0.6] },
-  { id: 'person-mock', seed: 4, at: [-1.9, 1.7] },
-  { id: 'person-ears', seed: 7, at: [1.9, 1.7] },
-  { id: 'person-leave', seed: 6, at: [2.8, -0.6] },
+// Tappable listeners in an arc beside and behind Noah, left to right, so each
+// faces both Noah and (in profile or three-quarter) the camera. Their reaction
+// depends on tap order (see the state), not on who is tapped.
+const NOAH_AT = [0, 1];
+const NOAH_TURN = 0.45; // three-quarter toward the left half of the crowd
+const LISTENER_SPOTS = [
+  { seed: 3, at: [-3.2, 0.9] },
+  { seed: 4, at: [-2.2, -1.2] },
+  { seed: 7, at: [2.2, -1.2] },
+  { seed: 6, at: [3.2, 0.9] },
 ];
+const EDGE_X = 10; // side edges of the square, well off screen
+// A walker (and their shadow) fits in this sphere; once it leaves the camera
+// view they are gone.
+const OFF_VIEW_RADIUS = 1.8;
+const LEAVE_SPEED = 3; // the 4th listener storms off
+const WALK_OFF_SPEED = 0.9; // the others drift away slowly
+const HOLD_TIME = 0.4; // reactions finish before the backs turn (within TURN_TIME)
+const BOW = 0.3; // Noah's bowed head, radians
+
+// Turns a person's root smoothly toward a heading (radians), the short way round.
+function turnToward(p, heading, dt, speed = 8) {
+  const r = p.root.rotation;
+  const delta = Math.atan2(Math.sin(heading - r.y), Math.cos(heading - r.y));
+  r.y += delta * (1 - Math.exp(-speed * dt));
+}
 
 // Scene 2: Noah preaches in the town square; nobody listens.
 export default function createScene(ctx) {
@@ -20,8 +39,22 @@ export default function createScene(ctx) {
   const feasters = [];
   let landscape;
   let noah;
-  let alone = false;
+  let turnAt = Infinity; // when the others turn their backs on Noah
+  let walkingOff = false; // ...and now walk away slowly
   let t = 0;
+
+  // True once a person and their shadow are outside the camera view.
+  const frustum = new THREE.Frustum();
+  const viewSphere = new THREE.Sphere(new THREE.Vector3(), OFF_VIEW_RADIUS);
+  function offView(p) {
+    const cam = ctx.camera;
+    cam.updateMatrixWorld();
+    frustum.setFromProjectionMatrix(new THREE.Matrix4().multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse));
+    viewSphere.center.set(p.root.position.x, 0.9, p.root.position.z);
+    return !frustum.intersectsSphere(viewSphere);
+  }
+
+  const everyoneGone = () => listeners.every((L) => !L.person.root.visible);
 
   function buildSquare() {
     const plaza = mesh(new THREE.CircleGeometry(6.5, 40), mat(0xd9c7a3, { roughness: 1 }), ctx.root, 0, 0.02, 0);
@@ -45,17 +78,22 @@ export default function createScene(ctx) {
       buildSquare();
 
       noah = createPerson(familyLook('noah'));
-      noah.root.position.set(0, 0, 0);
+      noah.root.position.set(NOAH_AT[0], 0, NOAH_AT[1]);
+      noah.root.rotation.y = NOAH_TURN;
       ctx.root.add(noah.root);
 
-      for (const L of LISTENERS) {
-        const p = createTownsperson(L.seed);
-        p.root.position.set(L.at[0], 0, L.at[1]);
-        facePoint(p, 0, 0);
+      LISTENER_SPOTS.forEach((spot, i) => {
+        const p = createTownsperson(spot.seed);
+        p.root.position.set(spot.at[0], 0, spot.at[1]);
+        facePoint(p, NOAH_AT[0], NOAH_AT[1]);
         ctx.root.add(p.root);
-        ctx.tap.mark(p.root, L.id);
-        listeners.push({ ...L, person: p, gesture: null, leaving: false, leaveIn: -1 });
-      }
+        const id = LISTENERS[i];
+        ctx.tap.mark(p.root, id);
+        // Each walks out to the nearest side edge, keeping their depth, so no
+        // path crosses Noah or another listener.
+        const exit = { x: Math.sign(spot.at[0]) * EDGE_X, z: spot.at[1] };
+        listeners.push({ id, person: p, gesture: null, exit, speed: 0 });
+      });
       [-1.3, -0.2, 0.9].forEach((x, i) => {
         const p = createTownsperson(10 + i);
         p.root.position.set(x, 0, -4.3);
@@ -69,27 +107,41 @@ export default function createScene(ctx) {
     update(dt) {
       t += dt;
       landscape.update(dt);
-      for (const ev of state.tick(dt)) if (ev === 'alone') alone = true;
-
-      updatePerson(noah, dt, { gesture: alone ? null : 'openArms' });
-      if (alone) noah.head.rotation.x = Math.min(0.3, noah.head.rotation.x + dt * 0.3); // head bowed
+      for (const ev of state.tick(dt)) {
+        if (ev === 'turnAway') turnAt = t + HOLD_TIME;
+        if (ev === 'walkOff') walkingOff = true;
+      }
 
       for (const L of listeners) {
         const p = L.person;
+        if (!p.root.visible) continue;
+        // Everyone still in the square walks off once the finale says so.
+        if (walkingOff && !L.speed) {
+          // Swap the body's half turn into the root so walking starts from
+          // the turned-away pose without a visual jump.
+          p.root.rotation.y += p.body.rotation.y;
+          p.body.rotation.y = 0;
+          L.speed = WALK_OFF_SPEED;
+        }
         let moving = false;
-        if (L.leaveIn > 0) {
-          L.leaveIn -= dt;
-          if (L.leaveIn <= 0) L.leaving = true;
+        let gesture = L.gesture;
+        if (L.speed) {
+          const pos = p.root.position;
+          turnToward(p, Math.atan2(L.exit.x - pos.x, L.exit.z - pos.z), dt);
+          moving = !stepToward(pos, L.exit, L.speed, dt);
+          if (!moving || offView(p)) p.root.visible = false;
+          gesture = null;
+        } else if (t >= turnAt) {
+          gesture = 'turnAway'; // the reaction plays on until they turn
         }
-        if (L.leaving) {
-          moving = !stepToward(p.root.position, { x: 9, z: 3 }, 1.4, dt);
-          if (moving) facePoint(p, 9, 3);
-          else p.root.visible = false;
-        }
-        // Once Noah is alone, everyone left in the square turns their back.
-        const gesture = alone && !L.leaving ? 'turnAway' : L.leaving ? null : L.gesture;
         updatePerson(p, dt, { moving, gesture });
       }
+
+      // Noah keeps preaching until the square is empty, then bows his head.
+      const gone = everyoneGone();
+      updatePerson(noah, dt, { gesture: gone ? null : 'openArms' });
+      if (gone) noah.head.rotation.x = Math.min(BOW, noah.head.rotation.x + dt * 0.3);
+
       // The feasters keep eating and drinking.
       feasters.forEach((p, i) => {
         updatePerson(p, dt);
@@ -103,11 +155,12 @@ export default function createScene(ctx) {
       if (!reaction) return;
       const L = listeners.find((x) => x.id === id);
       ctx.tap.unmark(L.person.root);
-      L.gesture = reaction;
-      if (reaction === 'turnAway') L.leaveIn = 0.9; // turns around, then walks off
+      if (reaction === 'leave') L.speed = LEAVE_SPEED; // turns and storms off
+      else L.gesture = reaction; // loops until the finale turns them away
     },
     isLocked: () => state.locked,
-    isDone: () => state.done,
+    // "Next" waits until the square is empty and Noah has bowed his head.
+    isDone: () => state.done && everyoneGone() && noah.head.rotation.x >= BOW,
     dispose() { disposeTree(ctx.root); },
   };
 }

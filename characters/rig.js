@@ -42,12 +42,13 @@ export const limbEnd = (radius, length) => length + radius * 2;
 
 // A limb hanging from a pivot, with a joint sphere covering the pivot so no gap
 // shows while it rotates. The pivot must sit INSIDE the parent body's volume.
-export function addLimb(parent, { x, y, z = 0, radius, length, material, jointRadius = radius * 1.1 }) {
+// `geometry` replaces the limb capsule (same size) and `jointMaterial` the joint's material.
+export function addLimb(parent, { x, y, z = 0, radius, length, material, jointRadius = radius * 1.1, geometry, jointMaterial }) {
   const pivot = new THREE.Group();
   pivot.position.set(x, y, z);
   parent.add(pivot);
-  mesh(sphere(jointRadius), material, pivot);
-  mesh(capsule(radius, length), material, pivot, 0, -(length / 2 + radius), 0);
+  mesh(sphere(jointRadius), jointMaterial ?? material, pivot);
+  pivot.userData.limb = mesh(geometry ?? capsule(radius, length), material, pivot, 0, -(length / 2 + radius), 0);
   return pivot;
 }
 
