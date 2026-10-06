@@ -19,7 +19,7 @@ const HAZE_FADE = 1; // seconds for the leftover water to fade once it has gone 
 const CAMERA_TIME = 1.5; // seconds for the view to widen after each release
 const FRAME_MARGIN = 1.5; // ground margin around the standing groups when framing
 const SPEED = 3; // everyone, birds included, keeps the same pace so the file stays evenly spaced
-const QUEUE_GAP = 0.6; // room between one character's tail and the next one's nose
+const QUEUE_GAP = 0.8; // room between one character's tail and the next one's nose
 // Room between neighbours at their slots.
 const SLOT_GAP = 0.5;
 const TURN_DISTANCE = 1.5; // from this far out a character starts turning to face the camera at its slot
