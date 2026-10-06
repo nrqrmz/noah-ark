@@ -5,15 +5,21 @@ import { createPerson, createTownsperson, familyLook, updatePerson, facePoint } 
 import { createHouse } from '../world/props.js';
 import { mat, mesh, sphere } from '../characters/rig.js';
 
-// Tappable listeners around Noah, left to right. Their reaction depends on
-// tap order (see the state), not on who is tapped.
+// Tappable listeners in an arc beside and behind Noah, left to right, so each
+// faces both Noah and (in profile or three-quarter) the camera. Their reaction
+// depends on tap order (see the state), not on who is tapped.
+const NOAH_AT = [0, 1];
+const NOAH_TURN = 0.45; // three-quarter toward the left half of the crowd
 const LISTENER_SPOTS = [
-  { seed: 3, at: [-2.8, -0.6] },
-  { seed: 4, at: [-1.9, 1.7] },
-  { seed: 7, at: [1.9, 1.7] },
-  { seed: 6, at: [2.8, -0.6] },
+  { seed: 3, at: [-3.2, 0.9] },
+  { seed: 4, at: [-2.2, -1.2] },
+  { seed: 7, at: [2.2, -1.2] },
+  { seed: 6, at: [3.2, 0.9] },
 ];
-const EDGE_X = 10; // side edges of the square, off screen
+const EDGE_X = 10; // side edges of the square, well off screen
+// A walker (and their shadow) fits in this sphere; once it leaves the camera
+// view they are gone.
+const OFF_VIEW_RADIUS = 1.8;
 const LEAVE_SPEED = 3; // the 4th listener storms off
 const WALK_OFF_SPEED = 0.9; // the others drift away slowly
 const HOLD_TIME = 0.4; // reactions finish before the backs turn (within TURN_TIME)
@@ -36,6 +42,17 @@ export default function createScene(ctx) {
   let turnAt = Infinity; // when the others turn their backs on Noah
   let walkingOff = false; // ...and now walk away slowly
   let t = 0;
+
+  // True once a person and their shadow are outside the camera view.
+  const frustum = new THREE.Frustum();
+  const viewSphere = new THREE.Sphere(new THREE.Vector3(), OFF_VIEW_RADIUS);
+  function offView(p) {
+    const cam = ctx.camera;
+    cam.updateMatrixWorld();
+    frustum.setFromProjectionMatrix(new THREE.Matrix4().multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse));
+    viewSphere.center.set(p.root.position.x, 0.9, p.root.position.z);
+    return !frustum.intersectsSphere(viewSphere);
+  }
 
   const everyoneGone = () => listeners.every((L) => !L.person.root.visible);
 
@@ -61,13 +78,14 @@ export default function createScene(ctx) {
       buildSquare();
 
       noah = createPerson(familyLook('noah'));
-      noah.root.position.set(0, 0, 0);
+      noah.root.position.set(NOAH_AT[0], 0, NOAH_AT[1]);
+      noah.root.rotation.y = NOAH_TURN;
       ctx.root.add(noah.root);
 
       LISTENER_SPOTS.forEach((spot, i) => {
         const p = createTownsperson(spot.seed);
         p.root.position.set(spot.at[0], 0, spot.at[1]);
-        facePoint(p, 0, 0);
+        facePoint(p, NOAH_AT[0], NOAH_AT[1]);
         ctx.root.add(p.root);
         const id = LISTENERS[i];
         ctx.tap.mark(p.root, id);
@@ -111,7 +129,7 @@ export default function createScene(ctx) {
           const pos = p.root.position;
           turnToward(p, Math.atan2(L.exit.x - pos.x, L.exit.z - pos.z), dt);
           moving = !stepToward(pos, L.exit, L.speed, dt);
-          if (!moving) p.root.visible = false;
+          if (!moving || offView(p)) p.root.visible = false;
           gesture = null;
         } else if (t >= turnAt) {
           gesture = 'turnAway'; // the reaction plays on until they turn
