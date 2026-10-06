@@ -6,7 +6,7 @@ import { createAnimal, updateAnimal } from './characters/animals/index.js';
 import { createWater, createArarat, createHills } from './world/terrain.js';
 import { createClouds, createRain, createRainbow, createGodLight } from './world/sky.js';
 import { createArk, createBlueprint } from './world/ark.js';
-import { createTree, createHouse, createFightCloud, createFood, createOliveLeaf } from './world/props.js';
+import { createTree, createHouse, createFightCloud, createDustBurst, createJars, createBreadBasket, createFood, createOliveLeaf } from './world/props.js';
 import { FOODS } from './characters/animals/data.js';
 
 // Dev-only model gallery. ?view=people|animals|world; ?cam=x,y,z&target=x,y,z to zoom.
@@ -42,23 +42,38 @@ controls.target.set(...vec(params.get('target'), [0, 1.2, 0]));
 controls.update();
 
 const updaters = [];
-const GESTURES = [null, 'openArms', 'laugh', 'mock', 'disbelief', 'chop', 'wave', 'turnAway'];
+const GESTURES = [null, 'openArms', 'laugh', 'mock', 'disbelief', 'chop', 'wave', 'turnAway', 'kick', 'handsOnHead', 'sit', 'carry'];
 
 if (view === 'people') {
+  // ?gesture= fixes one gesture; ?walk=1 makes everyone walk in place; ?rot= turns
+  // everyone (rot=1.57 shows them all in profile).
   const people = [
     ...FAMILY.map((m) => createPerson(m.look)),
     createTownsperson(0), createTownsperson(1), createTownsperson(2), createTownsperson(5, { mask: true }),
+    createTownsperson(6, { mask: true, hair: 0xe8c84a }), // scene 1 thief: blond so the mask stands out
   ];
+  // A townswoman carrying a bread basket, always with the carry gesture.
+  const carrier = createTownsperson(3);
+  const basket = createBreadBasket();
+  basket.scale.setScalar(1 / carrier.root.scale.x);
+  basket.position.set(0, 1.19, 0.56); // nominal units: rim between the hands
+  carrier.body.add(basket);
+  people.push(carrier);
   people.forEach((p, i) => {
     p.root.position.set((i - (people.length - 1) / 2) * 1.25, 0, 0);
+    p.root.rotation.y = Number(params.get('rot') ?? 0);
     scene.add(p.root);
   });
   const fixed = params.get('gesture');
+  const walk = params.get('walk') === '1';
   let clock = 0;
   updaters.push((dt) => {
     clock += dt;
     const g = fixed ?? GESTURES[Math.floor(clock / 2) % GESTURES.length];
-    people.forEach((p, i) => updatePerson(p, dt, { moving: !fixed && i % 3 === 0, gesture: g === 'null' ? null : g }));
+    people.forEach((p, i) => {
+      const moving = walk || (!fixed && i % 3 === 0);
+      updatePerson(p, dt, { moving, gesture: p === carrier ? 'carry' : g === 'null' ? null : g });
+    });
   });
 }
 
@@ -132,6 +147,46 @@ if (view === 'world') {
   fight.root.position.set(6, 0, 1);
   scene.add(fight.root);
   updaters.push((dt) => fight.update(dt));
+
+  // Scene 1 props, front row (z = 7): a wide fight cloud hiding two fighters 1 unit
+  // apart (?fighters=1 hides the cloud to show them), a dust burst, whole and
+  // smashed jars, a bread basket, and a tall house with its shutter askew.
+  const bigFight = createFightCloud({ width: 2.2 });
+  bigFight.root.position.set(-9, 0, 7);
+  bigFight.root.visible = !params.get('fighters');
+  scene.add(bigFight.root);
+  updaters.push((dt) => bigFight.update(dt));
+  [-0.5, 0.5].forEach((x, i) => {
+    const p = createTownsperson(2 + i * 3);
+    p.root.position.set(-9 + x, 0, 7);
+    p.root.rotation.y = x < 0 ? Math.PI / 2 : -Math.PI / 2;
+    scene.add(p.root);
+    updaters.push((dt) => updatePerson(p, dt, { gesture: 'laugh' }));
+  });
+  const dust = createDustBurst({ size: 1 });
+  dust.root.position.set(-4.5, 1.2, 7);
+  scene.add(dust.root);
+  let dustT = 0;
+  updaters.push((dt) => {
+    dustT += dt;
+    if (dustT > 1.2) { dustT = 0; dust.puff(); }
+    dust.update(dt);
+  });
+  const jars = createJars();
+  jars.root.position.set(-1.5, 0, 7);
+  scene.add(jars.root);
+  const broken = createJars();
+  broken.smash();
+  broken.root.position.set(0.5, 0, 7);
+  scene.add(broken.root);
+  const bread = createBreadBasket();
+  bread.scale.setScalar(2);
+  bread.position.set(2.6, 0, 7);
+  scene.add(bread);
+  const tall = createHouse(2, { tall: true });
+  tall.userData.shutter.rotation.z = Number(params.get('shutter') ?? tall.userData.shutterAskew);
+  tall.position.set(7, 0, 5);
+  scene.add(tall);
 
   const god = createGodLight();
   god.setIntensity(1);

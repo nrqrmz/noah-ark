@@ -41,31 +41,66 @@ export function createTree() {
   return api;
 }
 
-// A small mud-brick house. Variants change the wall color and door side.
-export function createHouse(variant = 0) {
+const SHUTTER_W = 0.24;
+
+// A small mud-brick house. Variants change the wall color and door side; `tall`
+// adds 1.2 to the height. userData: door (ground point in front of the door),
+// window (center of the front window) and shutter (a wooden shutter beside the
+// window hinged at its top outer corner: rotating it about z hangs it askew;
+// userData.shutterAskew is a good angle for that).
+export function createHouse(variant = 0, { tall = false } = {}) {
   const walls = [0xd8b98c, 0xcfa878, 0xe0c49c, 0xc9a070][variant % 4];
   const group = new THREE.Group();
   const w = 2.6 + (variant % 2) * 0.6;
-  const h = 2.1 + (variant % 3) * 0.3;
+  const h = 2.1 + (variant % 3) * 0.3 + (tall ? 1.2 : 0);
   const body = mesh(new THREE.BoxGeometry(w, h, 2.4), mat(walls, { roughness: 1 }), group, 0, h / 2);
   body.receiveShadow = true;
   mesh(new THREE.BoxGeometry(w + 0.2, 0.18, 2.6), mat(0xa58360, { roughness: 1 }), group, 0, h + 0.09);
   const doorX = variant % 2 ? -w * 0.22 : w * 0.22;
   mesh(new THREE.BoxGeometry(0.6, 1.2, 0.06), mat(0x4a3220), group, doorX, 0.6, 1.21);
-  mesh(new THREE.BoxGeometry(0.45, 0.4, 0.06), mat(0x2b1d12), group, -doorX, h * 0.62, 1.21);
+  const winY = h * 0.62;
+  mesh(new THREE.BoxGeometry(0.45, 0.4, 0.06), mat(0x2b1d12), group, -doorX, winY, 1.21);
+  // Shutter on the window's outer side (away from the door), hanging from its top outer corner.
+  const side = -Math.sign(doorX);
+  const hinge = new THREE.Vector3(-doorX + side * (0.225 + 0.04 + SHUTTER_W), winY + 0.22, 1.25);
+  const shutter = mesh(
+    geo(`shutter${side}`, () => new THREE.BoxGeometry(SHUTTER_W, 0.44, 0.04).translate(-side * SHUTTER_W / 2, -0.22, 0)),
+    mat(0x8a5a32), group, hinge.x, hinge.y, hinge.z,
+  );
+  for (const y of [-0.1, -0.34]) {
+    mesh(geo(`shutterSlat${side}`, () => new THREE.BoxGeometry(SHUTTER_W * 0.86, 0.035, 0.02).translate(-side * SHUTTER_W / 2, 0, 0.025)), mat(0x5e3c20), shutter, 0, y);
+  }
   group.userData.door = new THREE.Vector3(doorX, 0, 1.4);
+  group.userData.window = new THREE.Vector3(-doorX, winY, 1.24);
+  group.userData.shutter = shutter;
+  // Rotation that swings the shutter down outward, hanging askew from its one hinge.
+  group.userData.shutterAskew = side * 0.55;
   return group;
 }
 
-// Cartoon fight: a rolling dust cloud with little stars popping out.
-export function createFightCloud() {
+// Cartoon fight: a rolling dust cloud with little stars popping out. `width`
+// scales the puff orbit and star radii; past 1.2 a lumpy core fills the middle so
+// the cloud hides everyone inside (width 2.2 hides two people standing 1 unit apart).
+export function createFightCloud({ width = 1 } = {}) {
   const root = new THREE.Group();
   const puffMat = mat(0xe8e2d6, { roughness: 1 });
+  const big = width > 1.2;
   const puffs = [];
-  for (let i = 0; i < 9; i++) {
+  const count = Math.round(9 * Math.max(1, width * 0.75));
+  for (let i = 0; i < count; i++) {
     const p = mesh(sphere(0.45 + (i % 3) * 0.12, 10, 8), puffMat, root);
-    p.userData.a = (i / 9) * Math.PI * 2;
+    p.userData.a = (i / count) * Math.PI * 2;
+    p.userData.y = big ? (i % 2 ? 1.45 : 0.75) : 0.9;
     puffs.push(p);
+  }
+  // Core: overlapping puffs whose union holds two people (about 1.8 tall) 1 unit apart.
+  const core = [];
+  if (big) {
+    const k = width / 2.2;
+    for (const [x, y, z, r] of [[-0.55, 0.55, 0, 0.66], [0.55, 0.55, 0, 0.66], [-0.5, 1.3, 0, 0.64], [0.5, 1.3, 0, 0.64], [0, 0.95, 0.15, 0.72], [0, 1.85, 0, 0.5], [-0.45, 1.95, 0, 0.36], [0.45, 1.95, 0, 0.36]]) {
+      const c = mesh(sphere(r * k, 14, 10), puffMat, root, x * k, y, z * k);
+      core.push(c);
+    }
   }
   const starMat = mat(0xffd84a, { basic: true });
   const stars = [];
@@ -78,27 +113,175 @@ export function createFightCloud() {
   const limbMat = mat(0xc99a6e);
   const hand = mesh(sphere(0.13), limbMat, root);
   const foot = mesh(geo('sandal', () => new THREE.BoxGeometry(0.17, 0.07, 0.3)), mat(0x6b4a2b), root);
+  const starY = big ? 2.45 : 1.6;
+  const reach = big ? 0.75 : 1; // the hand and foot poke out of the core's edge
   let t = 0;
   return {
     root,
     update(dt) {
       t += dt;
       puffs.forEach((p, i) => {
-        const a = p.userData.a + t * 3;
-        p.position.set(Math.cos(a) * 0.55, 0.9 + Math.sin(a * 2 + i) * 0.3, Math.sin(a) * 0.35);
+        const a = p.userData.a + t * 3 * (big && i % 2 ? -1 : 1);
+        p.position.set(Math.cos(a) * 0.55 * width, p.userData.y + Math.sin(a * 2 + i) * (big ? 0.18 : 0.3), Math.sin(a) * 0.35 * width);
         p.scale.setScalar(1 + Math.sin(t * 9 + i) * 0.12);
       });
+      core.forEach((c, i) => c.scale.setScalar(1.05 + Math.sin(t * 7 + i * 1.7) * 0.05));
       stars.forEach((s, i) => {
         const a = s.userData.a + t * 4;
-        s.position.set(Math.cos(a) * 1.1, 1.6 + Math.sin(t * 6 + i) * 0.25, Math.sin(a) * 0.6);
+        s.position.set(Math.cos(a) * 1.1 * width, starY + Math.sin(t * 6 + i) * 0.25, Math.sin(a) * 0.6 * width);
         s.rotation.y += dt * 6;
       });
-      hand.position.set(Math.cos(t * 5) * 0.95, 1.0 + Math.sin(t * 7) * 0.2, 0.3);
+      hand.position.set(Math.cos(t * 5) * 0.95 * width * reach, 1.0 + Math.sin(t * 7) * 0.2, 0.3 * width);
       hand.visible = Math.sin(t * 3) > 0;
-      foot.position.set(-Math.cos(t * 4) * 0.9, 0.5, 0.35);
+      foot.position.set(-Math.cos(t * 4) * 0.9 * width * reach, 0.5, 0.35 * width);
       foot.visible = Math.sin(t * 2.3 + 1) > 0.2;
     },
   };
+}
+
+// Light-gray dust puffs that pop out, drift up and fade ("things got smashed").
+// Never dark smoke. `puff()` emits one burst at the root's origin.
+export function createDustBurst({ size = 1 } = {}) {
+  const root = new THREE.Group();
+  const pool = [];
+  let bursts = 0;
+  const spawn = () => {
+    let p = pool.find((q) => !q.visible);
+    if (!p) {
+      // A soft emissive keeps the shaded side light gray, never dark like smoke.
+      const m = new THREE.MeshStandardMaterial({ color: 0xd8d2c6, emissive: 0x77736b, roughness: 1, transparent: true, depthWrite: false });
+      p = new THREE.Mesh(geo('dustPuff', () => new THREE.SphereGeometry(1, 12, 8)), m);
+      root.add(p);
+      pool.push(p);
+    }
+    return p;
+  };
+  return {
+    root,
+    puff() {
+      const n = 7;
+      for (let i = 0; i < n; i++) {
+        const p = spawn();
+        const a = (i / n) * Math.PI * 2 + bursts * 0.7;
+        const out = 0.9 + ((i * 5 + bursts) % 3) * 0.3;
+        // Mostly forward (toward the viewer, +z) and up, a little to the sides.
+        p.userData.v = new THREE.Vector3(Math.cos(a) * out, 0.6 + (i % 3) * 0.35, 0.5 + Math.abs(Math.sin(a)) * out * 0.6).multiplyScalar(size);
+        p.userData.age = 0;
+        p.userData.r = (0.22 + (i % 3) * 0.06) * size;
+        p.position.set(0, 0, 0);
+        p.scale.setScalar(0.01);
+        p.visible = true;
+      }
+      bursts++;
+    },
+    update(dt) {
+      for (const p of pool) {
+        if (!p.visible) continue;
+        const d = p.userData;
+        d.age += dt;
+        const k = d.age / DUST_LIFE;
+        if (k >= 1) { p.visible = false; continue; }
+        p.position.addScaledVector(d.v, dt);
+        d.v.multiplyScalar(Math.exp(-2.5 * dt)); // the burst slows down
+        d.v.y += 0.25 * size * dt; // and drifts up
+        const pop = Math.min(1, d.age / 0.15);
+        p.scale.setScalar(d.r * (0.4 + 0.6 * pop) * (1 + k * 0.8));
+        p.material.opacity = 0.9 * (1 - k * k);
+      }
+    },
+  };
+}
+const DUST_LIFE = 1.4;
+
+const CLAY = 0xb8683c;
+
+// Clay jar profile (lathe), about 0.55 tall at scale 1.
+const JAR_PROFILE = [[0, 0], [0.12, 0], [0.19, 0.08], [0.22, 0.2], [0.2, 0.33], [0.12, 0.43], [0.085, 0.47], [0.1, 0.53], [0.075, 0.55]];
+const jarGeometry = () => geo('jar', () => new THREE.LatheGeometry(JAR_PROFILE.map(([x, y]) => new THREE.Vector2(x, y)), 18));
+const SHARD_MAT = new THREE.MeshStandardMaterial({ color: CLAY, roughness: 0.9, side: THREE.DoubleSide });
+SHARD_MAT.userData.shared = true;
+
+// Three clay jars by a door; smash() swaps them for curved shards on the ground.
+export function createJars() {
+  const root = new THREE.Group();
+  const whole = new THREE.Group();
+  const shards = new THREE.Group();
+  root.add(whole, shards);
+  const spots = [[-0.32, 0, 1], [0.12, 0.1, 0.85], [0.56, -0.05, 1.1]];
+  spots.forEach(([x, z, s], i) => {
+    const jar = mesh(jarGeometry(), mat(i === 1 ? 0xc77a48 : CLAY, { roughness: 0.9 }), whole, x, 0, z);
+    jar.scale.setScalar(s);
+    // A painted band around the belly.
+    const band = mesh(geo('jarBand', () => new THREE.TorusGeometry(0.215, 0.012, 6, 24)), mat(0x7a3f1f), jar, 0, 0.22);
+    band.rotation.x = Math.PI / 2;
+  });
+  // Shards: curved bits of the jar wall lying around where each jar stood.
+  const box = new THREE.Box3();
+  spots.forEach(([x, z, s], j) => {
+    for (let i = 0; i < 5; i++) {
+      const k = i % 3;
+      const phi = 0.8 + (i % 2) * 0.5;
+      const piece = mesh(
+        geo(`shard${k}:${phi}`, () => new THREE.LatheGeometry(
+          JAR_PROFILE.slice(2 + k, 5 + k).map(([px, py]) => new THREE.Vector2(px, py - JAR_PROFILE[2 + k][1])), 4, -phi / 2, phi,
+        )),
+        SHARD_MAT, shards,
+      );
+      const a = i * 1.3 + j;
+      const r = 0.14 + k * 0.12;
+      // Lying down with the curved wall arching up, like a broken bowl piece.
+      piece.rotation.order = 'YXZ';
+      piece.rotation.set(-Math.PI / 2 + 0.15 * (i % 2), a, 0);
+      piece.scale.setScalar(s * 0.85);
+      piece.position.set(x + Math.cos(a) * r * s, 0, z + Math.sin(a) * r * s);
+      piece.position.y -= box.setFromObject(piece).min.y; // edges resting on the ground
+    }
+    // The jar's base stays standing as a short broken ring.
+    const base = mesh(geo('jarBase', () => new THREE.LatheGeometry(JAR_PROFILE.slice(0, 3).map(([px, py]) => new THREE.Vector2(px, py)), 18)), SHARD_MAT, shards, x, 0, z);
+    base.scale.setScalar(s);
+  });
+  shards.visible = false;
+  return {
+    root,
+    smash() {
+      whole.visible = false;
+      shards.visible = true;
+    },
+  };
+}
+
+// A woven basket of round loaves, about 0.38 across.
+export function createBreadBasket() {
+  const g = new THREE.Group();
+  const wicker = mat(0xc9a15e, { roughness: 1 });
+  const dark = mat(0x9c7438, { roughness: 1 });
+  const profile = [[0, 0], [0.13, 0], [0.16, 0.04], [0.18, 0.11], [0.19, 0.16]].map(([x, y]) => new THREE.Vector2(x, y));
+  mesh(geo('basket', () => new THREE.LatheGeometry(profile, 20)), wicker, g);
+  // Inside wall so the open basket is never see-through.
+  const inner = mesh(geo('basketIn', () => new THREE.LatheGeometry(profile.map((v) => new THREE.Vector2(v.x * 0.94, v.y + 0.005)).reverse(), 20)), dark, g);
+  inner.castShadow = false;
+  // Woven bands: alternating rings around the wall, and a thick rim.
+  for (const [y, r, m] of [[0.035, 0.155, dark], [0.075, 0.17, wicker], [0.115, 0.181, dark]]) {
+    mesh(geo(`weave${r}`, () => new THREE.TorusGeometry(r, 0.014, 6, 28)), m, g, 0, y).rotation.x = Math.PI / 2;
+  }
+  mesh(geo('basketRim', () => new THREE.TorusGeometry(0.19, 0.022, 8, 28)), dark, g, 0, 0.16).rotation.x = Math.PI / 2;
+  // Upright ribs following the wall's slope.
+  for (let i = 0; i < 10; i++) {
+    const a = (i / 10) * Math.PI * 2;
+    const at = (r, y) => v3(Math.cos(a) * r, y, Math.sin(a) * r);
+    stick(g, at(0.167, 0.04), at(0.196, 0.15), 0.01, dark);
+  }
+  // Round loaves heaped above the rim, each with a score mark.
+  const crust = mat(0xd9993f, { roughness: 0.8 });
+  const score = mat(0xf1d08a, { roughness: 0.8 });
+  for (const [x, y, z, r] of [[-0.07, 0.17, 0.04, 0.085], [0.08, 0.17, 0.03, 0.08], [0, 0.18, -0.08, 0.085], [0.01, 0.25, 0, 0.075]]) {
+    const loaf = mesh(sphere(r, 14, 10), crust, g, x, y, z);
+    loaf.scale.set(1, 0.7, 1);
+    const cut = mesh(capsule(0.012, r * 0.9), score, loaf, 0, r * 0.97, 0);
+    cut.rotation.z = Math.PI / 2;
+    cut.rotation.y = x * 8;
+  }
+  return g;
 }
 
 const v3 = (x, y, z) => new THREE.Vector3(x, y, z);
