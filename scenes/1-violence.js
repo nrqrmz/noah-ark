@@ -10,15 +10,18 @@ import { mat, mesh, sphere } from '../characters/rig.js';
 const BACK_ROW = [[-6.2, -5.6, 1], [-2.2, -5.8, 2], [1.8, -5.6, 3]];
 // Front row, tappable: A and B are neighbors (touching), C has jars, D bread.
 const FRONT_ROW = [[-7.4, -0.6, 0], [-4.8, -0.6, 2], [-1.4, -0.6, 1], [1.9, -0.6, 3]];
-const FIELD_X = 5.6;
-const NOAH_SPOT = new THREE.Vector3(4.8, 0, 3);
+const FIELD_X = 5.0;
+const NOAH_SPOT = new THREE.Vector3(4.2, 0, 3);
 
 // Paths. Everyone comes from and leaves by the left edge, never by Noah's field.
-const EDGE_X = -11;
-const THIEF_Z = 0.9; // along the house fronts, behind the fight cloud
-const FIGHT_Z = 2.7; // the fight sits forward so the doors and windows behind it show
-const IN_Z = 4.75; // walkers coming in pass in front of the fight
-const OUT_Z = 5.5; // and leave on their own lane so nobody walks into anybody
+const EDGE_X = -10.5; // just off the visible left edge
+const OFF_X = -9; // left of this nobody is on screen, so walkers hurry
+const OFF_HURRY = 1.8;
+const THIEF_Z = 1.1; // along the house fronts (walls at 0.6), behind the fight cloud
+const FIGHT_Z = 3.0; // the fight sits forward so the doors and windows behind it show
+const FIGHT_SHIFT = 0.8; // and leans away from the house the thief will rob
+const IN_Z = 5.0; // walkers coming in pass in front of the fight
+const OUT_Z = 5.8; // and leave on their own lane so nobody walks into anybody
 const WALK = 1.9;
 const RUN = 2.6;
 
@@ -60,7 +63,8 @@ export default function createScene(ctx) {
     if (s?.to) {
       const pos = p.root.position;
       if (Math.hypot(s.to.x - pos.x, s.to.z - pos.z) > 1e-3) facePoint(p, s.to.x, s.to.z);
-      if (stepToward(pos, s.to, s.speed, dt)) a.steps.shift();
+      const speed = pos.x < OFF_X ? s.speed * OFF_HURRY : s.speed;
+      if (stepToward(pos, s.to, speed, dt)) a.steps.shift();
       else a.moving = true;
     } else if (s?.wait != null) {
       s.wait -= dt;
@@ -84,11 +88,13 @@ export default function createScene(ctx) {
   // ---------- Events ----------
 
   // Two neighbors come out of A and B, meet between the doors and fight inside
-  // a dust cloud that hides them both.
-  function startFight() {
+  // a dust cloud that hides them both. The meeting point leans toward house
+  // `i` (tapped first) so the other house's door and window stay in view.
+  function startFight(i) {
     const doors = [doorOf(0), doorOf(1)];
-    const mid = (doors[0].x + doors[1].x) / 2;
+    const mid = (doors[0].x + doors[1].x) / 2 + (i === 0 ? -FIGHT_SHIFT : FIGHT_SHIFT);
     let arrived = 0;
+    let revealed = false;
     const cloud = createFightCloud({ width: 2.2 });
     cloud.root.position.set(mid, 0, FIGHT_Z);
     cloud.root.visible = false;
@@ -102,6 +108,8 @@ export default function createScene(ctx) {
         { call: () => { arrived++; } },
         { until: () => arrived === 2 },
         { call: () => {
+          if (revealed) return; // both fighters reach this step; reveal once
+          revealed = true;
           for (const f of fighters) f.person.root.visible = false;
           cloud.root.visible = true;
           clouds.push({ cloud, t: 0 });
@@ -173,7 +181,7 @@ export default function createScene(ctx) {
     const start = v(EDGE_X, IN_Z);
     const a = addActor(createTownsperson(4), [
       ...enter(start),
-      { to: v(door.x - 0.6, IN_Z), speed: WALK },
+      { to: v(door.x - 0.2, IN_Z), speed: WALK },
       { to: kickSpot, speed: WALK },
       face(door.x + 2, kickSpot.z),
       { call: (a) => { a.gesture = 'kick'; a.person.t = 0; } },
@@ -181,13 +189,13 @@ export default function createScene(ctx) {
       { call: () => { jars.smash(); dust.puff(); } },
       { wait: 0.9 },
       { call: (a) => { a.gesture = null; } },
-      { to: v(door.x - 0.8, 3.4), speed: WALK },
+      { to: v(door.x - 0.2, 3.2), speed: WALK },
       { call: () => {
         owner.person.root.visible = true;
         facePoint(owner.person, door.x + 0.6, door.z + 3);
         owner.gesture = 'handsOnHead';
       } },
-      { to: v(door.x - 1.6, OUT_Z), speed: WALK },
+      { to: v(door.x - 0.2, OUT_Z), speed: WALK },
       { to: v(EDGE_X, OUT_Z), speed: RUN },
       leave,
     ], { at: start, visible: false });
@@ -229,7 +237,6 @@ export default function createScene(ctx) {
       { call: () => {
         holdBasket(pusher.person);
         carrier.gesture = 'sit';
-        carrier.steps.push({ to: v(stop.x + 0.25, stop.z), speed: 1.2 });
       } },
       { wait: 0.4 },
       { to: v(stop.x - 1.8, OUT_Z), speed: RUN },
@@ -280,7 +287,7 @@ export default function createScene(ctx) {
       light.setIntensity(0);
       ctx.root.add(light.group);
 
-      ctx.frame({ cx: -0.3, cy: 2.6, cz: 1.8, w: 18.5, h: 8, elev: 0.8, portrait: { w: 18.3, cx: -0.4, cy: 3.2, cz: 1.5, elev: 1.0 } });
+      ctx.frame({ cx: -0.6, cy: 3.0, cz: 0.5, w: 17.6, h: 8, elev: 0.6, portrait: { w: 15, cx: -1.9, cy: 3.4, cz: 0.5, elev: 0.65 } });
     },
 
     update(dt) {
@@ -326,7 +333,7 @@ export default function createScene(ctx) {
       const [kind, n] = ev.split(':');
       const i = Number(n);
       ctx.tap.unmark(houses[i]);
-      if (kind === 'fight') startFight();
+      if (kind === 'fight') startFight(i);
       else if (kind === 'thief') startThief(i);
       else if (kind === 'jars') startJars();
       else startFood();
