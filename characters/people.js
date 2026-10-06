@@ -180,7 +180,7 @@ const GESTURE_ARMS = {
   openArms: [-0.4, -1.15, -0.4, 1.15],
   laugh: [-0.7, -0.35, -0.7, 0.35],
   mock: [0, -0.12, -1.45, 0.15],
-  coverEars: [-2.75, -0.22, -2.75, 0.22],
+  disbelief: [-2.5, -0.5, -2.5, 0.5],
   turnAway: [0, -0.12, 0, 0.12],
   chop: [0, 0, 0, 0],
   wave: [0, -0.12, 0, 2.6],
@@ -232,6 +232,8 @@ export function updatePerson(p, dt, { moving = false, gesture = null } = {}) {
   p.body.rotation.z = shake;
   p.body.rotation.y = approach(p.body.rotation.y, g === 'turnAway' ? Math.PI : 0, dt, 4);
   p.head.rotation.z = g === 'mock' ? 0.15 : approach(p.head.rotation.z, 0, dt);
+  // Disbelief: a slow side-to-side head shake ("oh, sure").
+  p.head.rotation.y = approach(p.head.rotation.y, g === 'disbelief' ? Math.sin(p.t * 3) * 0.35 : 0, dt, 8);
   if (!moving && g === 'idle') p.body.scale.y = 1 + Math.sin(p.t * 2.5) * 0.012; // breathing
   else p.body.scale.y = 1;
 }

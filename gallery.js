@@ -42,7 +42,7 @@ controls.target.set(...vec(params.get('target'), [0, 1.2, 0]));
 controls.update();
 
 const updaters = [];
-const GESTURES = [null, 'openArms', 'laugh', 'mock', 'coverEars', 'chop', 'wave', 'turnAway'];
+const GESTURES = [null, 'openArms', 'laugh', 'mock', 'disbelief', 'chop', 'wave', 'turnAway'];
 
 if (view === 'people') {
   const people = [
