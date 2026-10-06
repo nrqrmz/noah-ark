@@ -48,7 +48,7 @@ export function addLimb(parent, { x, y, z = 0, radius, length, material, jointRa
   pivot.position.set(x, y, z);
   parent.add(pivot);
   mesh(sphere(jointRadius), jointMaterial ?? material, pivot);
-  mesh(geometry ?? capsule(radius, length), material, pivot, 0, -(length / 2 + radius), 0);
+  pivot.userData.limb = mesh(geometry ?? capsule(radius, length), material, pivot, 0, -(length / 2 + radius), 0);
   return pivot;
 }
 

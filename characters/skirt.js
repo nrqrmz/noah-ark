@@ -110,8 +110,7 @@ const fitTables = new Map();
 
 // For a hem, the longest lower-skirt length scale that fits two legs spread
 // symmetrically by +-spread around the skirt axis, on a spread grid.
-function fitTable(hem) {
-  if (fitTables.has(hem)) return fitTables.get(hem);
+export function fitTable(hem) {
   const table = [];
   for (let i = 0; i * SPREAD_STEP <= SPREAD_MAX + 1e-9; i++) {
     const pts = both(i * SPREAD_STEP);
@@ -122,13 +121,27 @@ function fitTable(hem) {
     else for (let k = 0; k < 14; k++) { const m = (lo + hi) / 2; if (fits(m)) lo = m; else hi = m; }
     table.push(Math.min(lo, table.at(-1) ?? 1));
   }
-  fitTables.set(hem, table);
   return table;
 }
 
+// Tables for the hems the people actually use (women 0.1, men 0.3), precomputed
+// with fitTable and floored to FIT_DECIMALS so they stay conservative; this keeps
+// the brute-force sampler off the first-frame path. Regenerate if the skirt
+// geometry changes (tests/skirt-fit.test.js fails when they drift).
+export const FIT_DECIMALS = 4;
+export const FIT_TABLE_CONSTANTS = new Map([
+  [0.1, [1, 1, 1, 1, 1, 1, 1, 0.8968, 0.7674, 0.7241, 0.6988, 0.6724, 0.645, 0.6165, 0.587, 0.5566, 0.5253, 0.4931, 0.4602, 0.4265, 0.3922, 0.3572, 0.3217, 0.2856, 0.249, 0.2121, 0.1749, 0.1373, 0.0996, 0.0617, 0.0236, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]],
+  [0.3, [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0.9926, 0.9521, 0.91, 0.8666, 0.8217, 0.7755, 0.728, 0.6794, 0.6297, 0.579, 0.5274, 0.4749, 0.4216, 0.3677, 0.3132, 0.2582, 0.2028, 0.147, 0.0911, 0.0349, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]],
+]);
+const tableFor = (hem) => {
+  let t = FIT_TABLE_CONSTANTS.get(hem) ?? fitTables.get(hem);
+  if (!t) { t = fitTable(hem); fitTables.set(hem, t); } // unknown hem: compute once
+  return t;
+};
+
 // Widest walking leg swing (radians each way) that stays inside the full skirt.
 export function maxSwing(hem) {
-  const t = fitTable(hem);
+  const t = tableFor(hem);
   let i = 0;
   while (i + 1 < t.length && t[i + 1] >= 1) i++;
   return i * SPREAD_STEP;
@@ -137,7 +150,7 @@ export function maxSwing(hem) {
 // Lower-skirt pose for the current leg angles: it tilts with the legs' mean,
 // shortens when they spread apart (a kick), and becomes a lap when seated.
 export function skirtPose(hem, legL, legR, sitW = 0) {
-  const t = fitTable(hem);
+  const t = tableFor(hem);
   const spread = Math.abs(legL - legR) / 2;
   const i = Math.min(t.length - 1, Math.ceil(spread / SPREAD_STEP - 1e-9)); // round up: conservative
   const L = HIP_Y - hem;

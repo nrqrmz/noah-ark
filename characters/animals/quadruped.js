@@ -186,7 +186,7 @@ export function buildQuadruped(o) {
   // The leg reaches from its pivot down to the ground: every foot touches y = 0.
   // Below the capsule end a paw hangs 0.32·legR lower; a hoof ends where the capsule does.
   const footDrop = o.legR * (o.paws ? 2.32 : 2);
-  const legLen = legY - footDrop;
+  const legLen = Math.max(0.05, legY - footDrop);
   const legCoat = painted('legs', o.legColor ?? o.color, capsuleRepeat(o.legR, legLen));
   // `legTaper` (bottom/top radius) gives thick upper legs slimming toward the paw;
   // its ends hide inside the joint sphere and the paw.
@@ -201,7 +201,7 @@ export function buildQuadruped(o) {
       jointMaterial: legMat, geometry: legCoat ? coatCapsule(o.legR, legLen) : legShape,
     });
     // The four legs share one texture; turning each one makes their markings differ.
-    if (legCoat) pivot.children[1].rotation.y = i * 1.9;
+    if (legCoat) pivot.userData.limb.rotation.y = i * 1.9;
     if (o.paws) mesh(sphere(o.legR * 1.2, 12, 8), legMat, pivot, 0, -(legLen + o.legR * 1.6), o.legR * 0.35).scale.set(1, 0.6, 1.35);
     if (o.hoof) mesh(geo(`hoof${o.legR}`, () => new THREE.CylinderGeometry(o.legR * 1.05, o.legR * 1.15, o.legR * 0.9, 10)), mat(o.hoof), pivot, 0, -(legLen + o.legR * 1.55), 0);
     legs.push(pivot);
@@ -319,8 +319,10 @@ export function buildQuadruped(o) {
     const len = r * sn.len;
     const back = r * (sn.back ?? 0.8);
     const front = r * (sn.front ?? 0.5);
-    const faceMat = painted('head', sn.color ?? o.headColor ?? o.color) ?? mat(sn.color ?? o.headColor ?? o.color);
-    const face = mesh(geo(`horseFace${r}:${len}`, () => new THREE.CylinderGeometry(front, back, len, 18)), faceMat, muzzle, 0, 0, len / 2);
+    const faceColor = sn.color ?? o.headColor ?? o.color;
+    // Same colour as the head: reuse its painted material instead of painting twice.
+    const faceMat = (faceColor === (o.headColor ?? o.color) ? headCoat : painted('head', faceColor)) ?? mat(faceColor);
+    const face = mesh(geo(`horseFace${r}:${len}:${front}:${back}`, () => new THREE.CylinderGeometry(front, back, len, 18)), faceMat, muzzle, 0, 0, len / 2);
     face.rotation.x = Math.PI / 2; // narrow end forward
     face.scale.set(0.8, 1, 0.95); // narrow side to side
     const noseMat = mat(sn.nose);
