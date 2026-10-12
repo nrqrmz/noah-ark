@@ -434,22 +434,32 @@ export function createFood(foodId) {
       break;
     }
     case 'fish': {
-      const body = mesh(sphere(0.2, 14, 10), mat(0x7fa6c9), g, 0, 0.14);
-      body.scale.set(1.5, 0.7, 0.45);
-      const tail = mesh(geo('fishTail', () => new THREE.ConeGeometry(0.12, 0.2, 3)), mat(0x5f86a9), g, -0.36, 0.14, 0);
-      tail.rotation.z = -Math.PI / 2;
-      for (const z of [-0.08, 0.08]) {
-        mesh(sphere(0.03), mat(0x111111, { basic: true }), g, 0.2, 0.18, z);
-        // Pectoral fin on each side.
-        const fin = mesh(sphere(0.07), mat(0x5f86a9), g, 0.02, 0.1, z * 1.6);
-        fin.scale.set(1.2, 0.4, 0.35);
-        fin.rotation.x = z > 0 ? 0.5 : -0.5;
+      // Cartoon goldfish facing +X: plump orange body, cream belly, forked tail, big eyes on both sides.
+      const ORANGE = 0xf28c38, FIN = 0xdb6a24;
+      const body = mesh(sphere(0.2, 24, 16), mat(ORANGE), g, 0, 0.22);
+      body.scale.set(1.35, 0.95, 0.6);
+      const belly = mesh(sphere(0.2, 24, 16), mat(0xfde2b4), g, 0.01, 0.15);
+      belly.scale.set(1.3, 0.62, 0.5);
+      // Forked tail: two flattened cones fanning out behind the body.
+      const tailGeo = geo('fishTailLobe', () => new THREE.ConeGeometry(0.09, 0.26, 3));
+      for (const s of [1, -1]) {
+        const lobe = mesh(tailGeo, mat(FIN), g, -0.37, 0.22 + s * 0.06, 0);
+        lobe.rotation.z = -Math.PI / 2 + s * 0.5;
+        lobe.scale.z = 0.3;
       }
-      // Dorsal fin and a pale belly.
-      const dorsal = mesh(geo('fishDorsal', () => new THREE.ConeGeometry(0.07, 0.18, 3)), mat(0x5f86a9), g, -0.02, 0.32, 0);
-      dorsal.rotation.z = 0.2;
-      const belly = mesh(sphere(0.2, 14, 10), mat(0xdbe7f1), g, 0, 0.1);
-      belly.scale.set(1.4, 0.4, 0.4);
+      // Dorsal fin and a pectoral fin on each side.
+      const dorsal = mesh(geo('fishDorsal', () => new THREE.ConeGeometry(0.09, 0.22, 3)), mat(FIN), g, -0.03, 0.44, 0);
+      dorsal.rotation.z = 0.35;
+      dorsal.scale.z = 0.3;
+      for (const z of [-1, 1]) {
+        const fin = mesh(sphere(0.07), mat(FIN), g, 0.04, 0.17, z * 0.11);
+        fin.scale.set(1.3, 0.35, 0.6);
+        fin.rotation.set(z * 0.5, z * -0.3, -0.3);
+        // Big white eye with a black pupil, one on each side of the head.
+        mesh(sphere(0.055, 12, 8), mat(0xffffff), g, 0.15, 0.27, z * 0.085);
+        mesh(sphere(0.032, 10, 8), mat(0x111111, { basic: true }), g, 0.17, 0.27, z * 0.12);
+      }
+      mesh(sphere(0.025), mat(0xc2452a), g, 0.27, 0.2, 0);
       break;
     }
     case 'seeds': {

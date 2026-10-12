@@ -99,5 +99,7 @@ export function buildCrocodile() {
 
   // Single-file queues let circles overlap by 15% (`queueClear` slack 0.85), so the
   // radius is the half-length / 0.85: a follower's snout stops at the leader's tail tip.
-  return { root, body, head, upperJaw, legs, tail, radius: HALF_LEN / 0.85, gait: 7 };
+  // `standRadius` is its width-wise footprint: pairs stand side by side across the
+  // body, so they need far less room than the length-based radius says.
+  return { root, body, head, upperJaw, legs, tail, radius: HALF_LEN / 0.85, standRadius: 0.5, gait: 7 };
 }

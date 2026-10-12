@@ -44,22 +44,32 @@ export default function createScene(ctx) {
     pairs = animalsInRound(round).map((id, i) => {
       const male = createAnimal(id, 'male');
       const female = createAnimal(id, 'female');
-      const gap = Math.max(male.radius, 0.35) * 0.85 + 0.25;
+      const footprint = (a) => a.standRadius ?? a.radius;
+      const gap = Math.max(footprint(male), 0.35) * 0.85 + 0.25;
       male.root.position.set(PAIR_X[i] - gap, 0, PAIR_Z);
       female.root.position.set(PAIR_X[i] + gap, 0, PAIR_Z);
       for (const a of [male, female]) {
         a.root.rotation.y = 0.25 * (i < 2 ? 1 : -1);
         // Small animals have tiny meshes: an invisible, larger target makes them easy to hit.
-        addTapProxy(a.root, Math.max(a.radius * 1.5, 0.7), Math.max(a.radius, 0.4));
+        const reach = Math.min(Math.max(footprint(a) * 1.4, 0.8), 1.6);
+        addTapProxy(a.root, reach, Math.max(footprint(a), 0.4));
         ctx.root.add(a.root);
         ctx.tap.mark(a.root, `pair-${id}`);
       }
-      return { id, animals: [male, female], walkers: null, shake: 0 };
+      // The space between the two counts too: one flat target spanning the whole pair.
+      const hit = new THREE.Group();
+      hit.position.set(PAIR_X[i], 0, PAIR_Z);
+      addTapProxy(hit, 1, 0.4).scale.set(Math.min(gap + 1, 1.7), 0.9, 1);
+      ctx.root.add(hit);
+      ctx.tap.mark(hit, `pair-${id}`);
+      return { id, animals: [male, female], hit, walkers: null, shake: 0 };
     });
   }
 
   // Each animal of the pair walks up the ramp; the female follows a moment later.
   function boardPair(pair) {
+    ctx.tap.unmark(pair.hit);
+    ctx.root.remove(pair.hit);
     pair.animals.forEach((a, k) => {
       ctx.tap.unmark(a.root);
       a.walk = { delay: k * 0.45, points: boarder.path() };
@@ -97,7 +107,7 @@ export default function createScene(ctx) {
         if (pair.walkers) continue;
         for (const a of pair.animals) {
           updateAnimal(a, dt, { shake: pair.shake > 0 });
-          solid.push(a);
+          solid.push({ root: a.root, radius: a.standRadius ?? a.radius });
         }
       }
       // Walkers go single file; for everyone else they are fixed obstacles,
