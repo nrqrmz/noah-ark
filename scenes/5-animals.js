@@ -49,6 +49,8 @@ export default function createScene(ctx) {
       female.root.position.set(PAIR_X[i] + gap, 0, PAIR_Z);
       for (const a of [male, female]) {
         a.root.rotation.y = 0.25 * (i < 2 ? 1 : -1);
+        // Small animals have tiny meshes: an invisible, larger target makes them easy to hit.
+        addTapProxy(a.root, Math.max(a.radius * 1.5, 0.7), Math.max(a.radius, 0.4));
         ctx.root.add(a.root);
         ctx.tap.mark(a.root, `pair-${id}`);
       }

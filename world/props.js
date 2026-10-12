@@ -339,9 +339,9 @@ const TAP_PROXY_MAT = new THREE.MeshBasicMaterial({ colorWrite: false, depthWrit
 TAP_PROXY_MAT.userData.shared = true;
 
 // Invisible, larger tap target for a food (radius in the food's local units).
-export function addTapProxy(food, radius = 0.55) {
+export function addTapProxy(food, radius = 0.55, y = 0.3) {
   const proxy = new THREE.Mesh(geo(`tapProxy${radius}`, () => new THREE.SphereGeometry(radius, 12, 8)), TAP_PROXY_MAT);
-  proxy.position.y = 0.3;
+  proxy.position.y = y;
   proxy.castShadow = false; // the shadow pass ignores colorWrite
   proxy.receiveShadow = false;
   proxy.userData.tapProxy = true; // tap.js prefers real meshes over proxies
@@ -438,7 +438,18 @@ export function createFood(foodId) {
       body.scale.set(1.5, 0.7, 0.45);
       const tail = mesh(geo('fishTail', () => new THREE.ConeGeometry(0.12, 0.2, 3)), mat(0x5f86a9), g, -0.36, 0.14, 0);
       tail.rotation.z = -Math.PI / 2;
-      mesh(sphere(0.03), mat(0x111111, { basic: true }), g, 0.2, 0.18, 0.08);
+      for (const z of [-0.08, 0.08]) {
+        mesh(sphere(0.03), mat(0x111111, { basic: true }), g, 0.2, 0.18, z);
+        // Pectoral fin on each side.
+        const fin = mesh(sphere(0.07), mat(0x5f86a9), g, 0.02, 0.1, z * 1.6);
+        fin.scale.set(1.2, 0.4, 0.35);
+        fin.rotation.x = z > 0 ? 0.5 : -0.5;
+      }
+      // Dorsal fin and a pale belly.
+      const dorsal = mesh(geo('fishDorsal', () => new THREE.ConeGeometry(0.07, 0.18, 3)), mat(0x5f86a9), g, -0.02, 0.32, 0);
+      dorsal.rotation.z = 0.2;
+      const belly = mesh(sphere(0.2, 14, 10), mat(0xdbe7f1), g, 0, 0.1);
+      belly.scale.set(1.4, 0.4, 0.4);
       break;
     }
     case 'seeds': {
