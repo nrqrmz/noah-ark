@@ -440,11 +440,12 @@ export function createFood(foodId) {
       body.scale.set(1.35, 0.95, 0.6);
       const belly = mesh(sphere(0.2, 24, 16), mat(0xfde2b4), g, 0.01, 0.15);
       belly.scale.set(1.3, 0.62, 0.5);
-      // Forked tail: two flattened cones fanning out behind the body.
-      const tailGeo = geo('fishTailLobe', () => new THREE.ConeGeometry(0.09, 0.26, 3));
+      // Forked tail: two flattened cones whose tips sink into the body and whose wide
+      // ends fan up and down behind it.
+      const tailGeo = geo('fishTailLobe', () => new THREE.ConeGeometry(0.1, 0.3, 3));
       for (const s of [1, -1]) {
-        const lobe = mesh(tailGeo, mat(FIN), g, -0.37, 0.22 + s * 0.06, 0);
-        lobe.rotation.z = -Math.PI / 2 + s * 0.5;
+        const lobe = mesh(tailGeo, mat(FIN), g, -0.35, 0.22 + s * 0.07, 0);
+        lobe.rotation.z = -Math.PI / 2 - s * 0.5;
         lobe.scale.z = 0.3;
       }
       // Dorsal fin and a pectoral fin on each side.
