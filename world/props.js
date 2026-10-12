@@ -440,14 +440,20 @@ export function createFood(foodId) {
       body.scale.set(1.35, 0.95, 0.6);
       const belly = mesh(sphere(0.2, 24, 16), mat(0xfde2b4), g, 0.01, 0.15);
       belly.scale.set(1.3, 0.62, 0.5);
-      // Forked tail: two flattened cones whose tips sink into the body and whose wide
-      // ends fan up and down behind it.
-      const tailGeo = geo('fishTailLobe', () => new THREE.ConeGeometry(0.1, 0.3, 3));
-      for (const s of [1, -1]) {
-        const lobe = mesh(tailGeo, mat(FIN), g, -0.35, 0.22 + s * 0.07, 0);
-        lobe.rotation.z = -Math.PI / 2 - s * 0.5;
-        lobe.scale.z = 0.3;
-      }
+      // One caudal fin: a thin fan that is narrow at the body and flares into a notched edge.
+      const tailGeo = geo('fishCaudal', () => {
+        const sh = new THREE.Shape();
+        sh.moveTo(0, 0.025);
+        sh.quadraticCurveTo(-0.1, 0.07, -0.24, 0.17);
+        sh.quadraticCurveTo(-0.2, 0.06, -0.17, 0); // notch in the trailing edge
+        sh.quadraticCurveTo(-0.2, -0.06, -0.24, -0.17);
+        sh.quadraticCurveTo(-0.1, -0.07, 0, -0.025);
+        sh.closePath();
+        const g2 = new THREE.ExtrudeGeometry(sh, { depth: 0.03, bevelEnabled: false });
+        g2.translate(0, 0, -0.015);
+        return g2;
+      });
+      mesh(tailGeo, mat(FIN), g, -0.22, 0.22, 0);
       // Dorsal fin and a pectoral fin on each side.
       const dorsal = mesh(geo('fishDorsal', () => new THREE.ConeGeometry(0.09, 0.22, 3)), mat(FIN), g, -0.03, 0.44, 0);
       dorsal.rotation.z = 0.35;
