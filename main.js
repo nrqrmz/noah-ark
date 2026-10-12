@@ -6,6 +6,7 @@ import {
   SCENE_IDS, createTranslator, loadDictionaries, rememberLanguage, recallLanguage,
 } from './i18n.js';
 import factories from './scenes/index.js';
+import { showBuildInfo } from './debug-version.js'; // DEBUG: remove later
 
 const $ = (id) => document.getElementById(id);
 const stage = $('stage');
@@ -161,6 +162,7 @@ document.addEventListener('visibilitychange', () => {
 });
 
 async function boot() {
+  showBuildInfo($('build-info')); // DEBUG: remove later
   dicts = await loadDictionaries();
   // The language buttons stay disabled until the texts have loaded.
   ui.btnEs.disabled = false;
